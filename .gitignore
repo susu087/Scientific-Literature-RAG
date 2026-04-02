@@ -1,0 +1,44 @@
+# virtual env
+venv/
+
+# cache
+.cache/
+__pycache__/
+*.pyc
+
+# model / checkpoints
+*.pt
+*.pth
+*.bin
+*.safetensors
+checkpoints/
+
+# arrays / embeddings / indexes
+*.npy
+*.npz
+*.faiss
+*.index
+
+# outputs
+outputs/
+results/
+logs/
+tmp/
+
+# retrieval artifacts
+retrieval_indices/
+
+# notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+
+# archives
+*.zip
+*.tar
+*.gz
+
+# OS files
+.DS_Store
