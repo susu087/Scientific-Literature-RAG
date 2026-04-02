@@ -1,0 +1,1 @@
+"""Minimal RAG prototype package."""
