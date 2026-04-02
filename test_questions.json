@@ -2,97 +2,97 @@
   {
     "id": "Q1",
     "type": "method",
-    "source_group": "inline_acl",
-    "question": "What methods are commonly used to compress large-scale language models using knowledge distillation techniques?"
+    "source_group": "inline_acl_aligned",
+    "question": "Are there any research papers on methods to compress large-scale language models using knowledge distillation techniques?"
   },
   {
     "id": "Q2",
     "type": "method",
-    "source_group": "inline_nonacl",
-    "question": "What methods have been proposed to improve dense retrieval for open-domain question answering?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Are there any papers on methods to improve dense retrieval for open-domain question answering?"
   },
   {
     "id": "Q3",
     "type": "method",
-    "source_group": "inline_nonacl",
-    "question": "What methods are used for parameter-efficient fine-tuning of pre-trained language models?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Are there studies on parameter-efficient fine-tuning methods for pre-trained language models?"
   },
   {
     "id": "Q4",
     "type": "method",
-    "source_group": "manual_acl",
-    "question": "What methods are used to learn sentence embeddings through contrastive learning?"
+    "source_group": "inline_acl_aligned",
+    "question": "Are there papers on learning sentence embeddings through contrastive learning methods?"
   },
   {
     "id": "Q5",
     "type": "definition",
-    "source_group": "inline_nonacl",
-    "question": "What is retrieval-augmented generation, and how is it used to enhance question answering systems?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Are there papers that define retrieval-augmented generation and discuss how it improves question answering systems?"
   },
   {
     "id": "Q6",
     "type": "definition",
-    "source_group": "inline_nonacl",
-    "question": "What is prompt tuning in pre-trained language models?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Are there papers that explain prompt tuning in pre-trained language models?"
   },
   {
     "id": "Q7",
     "type": "definition",
-    "source_group": "inline_acl",
-    "question": "What is contextualized calibration for answer probabilities in language models?"
+    "source_group": "inline_acl_aligned",
+    "question": "Are there papers that propose contextualized calibration for answer probabilities in language models?"
   },
   {
     "id": "Q8",
     "type": "definition",
-    "source_group": "inline_nonacl",
-    "question": "What is a cross-encoder ranker in text ranking and retrieval tasks?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Are there papers that discuss cross-encoder rankers in text ranking and retrieval tasks?"
   },
   {
     "id": "Q9",
     "type": "comparison",
-    "source_group": "derived_from_litsearch_topics",
-    "question": "What is the difference between BM25 and dense retrieval for academic search?"
+    "source_group": "litsearch_project_aligned",
+    "question": "Are there papers or resources that compare BM25 and dense retrieval for academic search?"
   },
   {
     "id": "Q10",
     "type": "comparison",
-    "source_group": "derived_from_litsearch_topics",
-    "question": "What is the difference between initial retrieval and reranking in academic search systems?"
+    "source_group": "litsearch_project_aligned",
+    "question": "Are there papers or resources that compare initial retrieval and reranking in academic search systems?"
   },
   {
     "id": "Q11",
     "type": "comparison",
-    "source_group": "inline_nonacl",
-    "question": "What is the difference between pruning, quantization, and knowledge distillation for model compression?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Are there papers comparing pruning, quantization, and knowledge distillation for model compression?"
   },
   {
     "id": "Q12",
     "type": "comparison",
-    "source_group": "inline_nonacl",
-    "question": "What is the difference between prompt tuning and full fine-tuning in limited-data settings?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Are there papers comparing prompt tuning and full fine-tuning in limited-data settings?"
   },
   {
     "id": "Q13",
     "type": "recommendation",
-    "source_group": "derived_from_litsearch_topics",
-    "question": "Which retrieval method is more suitable for semantic academic search tasks?"
+    "source_group": "litsearch_project_aligned",
+    "question": "Which papers discuss retrieval methods that are suitable for semantic academic search tasks?"
   },
   {
     "id": "Q14",
     "type": "recommendation",
-    "source_group": "inline_nonacl",
-    "question": "Which model compression methods are more suitable when computational resources are limited?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Which papers discuss model compression methods that are suitable when computational resources are limited?"
   },
   {
     "id": "Q15",
     "type": "recommendation",
-    "source_group": "inline_nonacl",
-    "question": "Which prompt-based tuning method is more suitable for few-shot adaptation of language models?"
+    "source_group": "inline_nonacl_aligned",
+    "question": "Which papers discuss prompt-based tuning methods that are suitable for few-shot adaptation of language models?"
   },
   {
     "id": "Q16",
     "type": "recommendation",
-    "source_group": "derived_from_litsearch_topics",
-    "question": "Which context construction strategy is more suitable for citation-grounded academic question answering?"
+    "source_group": "litsearch_project_aligned",
+    "question": "Are there papers discussing context construction strategies for citation-grounded academic question answering?"
   }
 ]
