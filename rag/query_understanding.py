@@ -72,8 +72,10 @@ def _extract_semantic_chunks(query: str) -> List[str]:
     cleaned = []
     for chunk in chunks:
         chunk = _normalize_whitespace(chunk)
-        if len(chunk.split()) >= 2:
-            cleaned.append(chunk)
+        tokens = re.findall(r"[A-Za-z][A-Za-z0-9\-]{2,}", chunk.lower())
+        content_tokens = [token for token in tokens if token not in STOPWORDS]
+        if 2 <= len(content_tokens) <= 5:
+            cleaned.append(" ".join(content_tokens))
     return cleaned
 
 
@@ -121,7 +123,8 @@ def understand_query(query: str, mode: str = "original", max_keywords: int = 8) 
     """
     original_query = _normalize_whitespace(query)
     keywords = _extract_keywords(original_query, max_keywords=max_keywords)
-    keyword_query = " ".join(keywords)
+    phrase_keywords = [keyword for keyword in keywords if " " in keyword]
+    keyword_query = " ".join(phrase_keywords or keywords)
 
     if mode not in {"original", "keywords"}:
         raise ValueError(f"Unsupported query understanding mode: {mode}")

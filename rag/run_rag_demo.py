@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
-from typing import Dict, List
+from typing import Any, Dict, List
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -15,7 +16,6 @@ if PROJECT_ROOT not in sys.path:
 from rag.build_context import build_context
 from rag.generate_answer import generate_answer
 from rag.query_understanding import understand_query
-from rag.retrieval_pipeline import E5Retriever, LocalReranker, run_retrieval_and_rerank
 
 
 def _format_query_understanding(result: Dict[str, object]) -> str:
@@ -52,10 +52,127 @@ def _format_references(references: List[Dict[str, object]]) -> str:
     return "\n".join(lines)
 
 
+def format_rag_result(result: Dict[str, Any], show_context_chars: int = 2000) -> str:
+    lines = [
+        "Question:",
+        str(result["question"]),
+        "",
+        "Query Understanding:",
+        _format_query_understanding(result["query_understanding"]),
+        "",
+        _format_documents("Top Retrieved Papers:", result["retrieved_docs"]),
+        "",
+        _format_documents("Top Reranked Papers:", result["reranked_docs"]),
+        "",
+        "Context:",
+    ]
+
+    context_text = str(result["context"])
+    preview = context_text[:show_context_chars]
+    if len(context_text) > show_context_chars:
+        preview += "..."
+    lines.append(preview)
+    lines.extend(
+        [
+            "",
+            "Answer:",
+            str(result["answer"]),
+            "",
+            _format_references(result["references"]),
+        ]
+    )
+    return "\n".join(lines)
+
+
+def run_rag_case(
+    question: str,
+    query_mode: str = "keywords",
+    context_strategy: str = "structured",
+    answer_backend: str = "mock",
+    top_k: int = 100,
+    rerank_top_k: int = 50,
+    context_top_n: int = 5,
+    per_doc_max_chars: int = 1200,
+    retrieval_index_path: str = os.path.join("retrieval_indices", "LitSearch.title_abstract.e5"),
+    dataset_path: str = "princeton-nlp/LitSearch",
+    local_corpus_path: str = os.path.join("data", "corpus_sample.json"),
+    reranker_model: str = "BAAI/bge-reranker-base",
+    reranker_batch_size: int = 4,
+    reranker_max_length: int = 512,
+    device: str = "cuda",
+) -> Dict[str, Any]:
+    from rag.retrieval_pipeline import E5Retriever, LocalReranker, run_retrieval_and_rerank
+
+    query_result = understand_query(question, mode=query_mode)
+    retrieval_query = str(query_result["rewritten_query"])
+
+    retriever = E5Retriever(
+        index_path=retrieval_index_path,
+        dataset_path=dataset_path,
+        local_fallback_path=local_corpus_path,
+        device=device,
+    )
+    reranker = LocalReranker(
+        model_name=reranker_model,
+        batch_size=reranker_batch_size,
+        max_length=reranker_max_length,
+        device=device,
+    )
+    pipeline_result = run_retrieval_and_rerank(
+        query_text=retrieval_query,
+        retriever=retriever,
+        top_k=top_k,
+        rerank_top_k=rerank_top_k,
+        reranker=reranker,
+    )
+
+    context_text, context_docs = build_context(
+        pipeline_result["reranked_docs"],
+        strategy=context_strategy,
+        top_n=context_top_n,
+        per_doc_max_chars=per_doc_max_chars,
+    )
+    answer_result = generate_answer(
+        question=question,
+        context=context_text,
+        documents=context_docs,
+        backend=answer_backend,
+    )
+
+    return {
+        "question": question,
+        "query_understanding": query_result,
+        "retrieval_query": retrieval_query,
+        "retrieved_docs": pipeline_result["retrieved_docs"],
+        "reranked_docs": pipeline_result["reranked_docs"],
+        "context": context_text,
+        "context_docs": context_docs,
+        "answer": answer_result["answer"],
+        "references": answer_result["references"],
+        "answer_backend": answer_result["backend"],
+        "config": {
+            "query_mode": query_mode,
+            "context_strategy": context_strategy,
+            "answer_backend": answer_backend,
+            "top_k": top_k,
+            "rerank_top_k": rerank_top_k,
+            "context_top_n": context_top_n,
+            "per_doc_max_chars": per_doc_max_chars,
+            "retrieval_index_path": retrieval_index_path,
+            "dataset_path": dataset_path,
+            "local_corpus_path": local_corpus_path,
+            "reranker_model": reranker_model,
+            "reranker_batch_size": reranker_batch_size,
+            "reranker_max_length": reranker_max_length,
+            "device": device,
+        },
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Minimal end-to-end RAG demo for LitSearch.")
     parser.add_argument("--question", type=str, required=True, help="User question for the RAG demo.")
-    parser.add_argument("--query_mode", type=str, default="original", choices=["original", "keywords"])
+    parser.add_argument("--query_mode", type=str, default="keywords", choices=["original", "keywords"])
     parser.add_argument("--context_strategy", type=str, default="structured", choices=["plain", "structured"])
     parser.add_argument("--answer_backend", type=str, default="mock", choices=["mock", "local"])
     parser.add_argument("--top_k", type=int, default=100, help="Number of E5 retrieved documents.")
@@ -70,69 +187,35 @@ def main() -> None:
     parser.add_argument("--reranker_max_length", type=int, default=512)
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--show_context_chars", type=int, default=2000)
+    parser.add_argument("--save_json", type=str, default="")
     args = parser.parse_args()
 
-    query_result = understand_query(args.question, mode=args.query_mode)
-    retrieval_query = str(query_result["rewritten_query"])
-
-    retriever = E5Retriever(
-        index_path=args.retrieval_index_path,
-        dataset_path=args.dataset_path,
-        local_fallback_path=args.local_corpus_path,
-    )
-    reranker = LocalReranker(
-        model_name=args.reranker_model,
-        batch_size=args.reranker_batch_size,
-        max_length=args.reranker_max_length,
-        device=args.device,
-    )
-    pipeline_result = run_retrieval_and_rerank(
-        query_text=retrieval_query,
-        retriever=retriever,
+    result = run_rag_case(
+        question=args.question,
+        query_mode=args.query_mode,
+        context_strategy=args.context_strategy,
+        answer_backend=args.answer_backend,
         top_k=args.top_k,
         rerank_top_k=args.rerank_top_k,
-        reranker=reranker,
-    )
-
-    context_text, context_docs = build_context(
-        pipeline_result["reranked_docs"],
-        strategy=args.context_strategy,
-        top_n=args.context_top_n,
         per_doc_max_chars=args.per_doc_max_chars,
+        context_top_n=args.context_top_n,
+        retrieval_index_path=args.retrieval_index_path,
+        dataset_path=args.dataset_path,
+        local_corpus_path=args.local_corpus_path,
+        reranker_model=args.reranker_model,
+        reranker_batch_size=args.reranker_batch_size,
+        reranker_max_length=args.reranker_max_length,
+        device=args.device,
     )
-    answer_result = generate_answer(
-        question=args.question,
-        context=context_text,
-        documents=context_docs,
-        backend=args.answer_backend,
-    )
+    print(format_rag_result(result, show_context_chars=args.show_context_chars))
 
-    print("Question:")
-    print(args.question)
-    print()
-
-    print("Query Understanding:")
-    print(_format_query_understanding(query_result))
-    print()
-
-    print(_format_documents("Top Retrieved Papers:", pipeline_result["retrieved_docs"]))
-    print()
-
-    print(_format_documents("Top Reranked Papers:", pipeline_result["reranked_docs"]))
-    print()
-
-    print("Context:")
-    preview = context_text[: args.show_context_chars]
-    if len(context_text) > args.show_context_chars:
-        preview += "..."
-    print(preview)
-    print()
-
-    print("Answer:")
-    print(answer_result["answer"])
-    print()
-
-    print(_format_references(answer_result["references"]))
+    if args.save_json:
+        save_path = os.path.abspath(args.save_json)
+        save_dir = os.path.dirname(save_path)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        with open(save_path, "w", encoding="utf-8") as file:
+            json.dump(result, file, indent=2, ensure_ascii=False)
 
 
 if __name__ == "__main__":

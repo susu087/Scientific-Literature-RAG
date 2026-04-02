@@ -3,19 +3,77 @@
 from __future__ import annotations
 
 import os
+import pickle
 from typing import Dict, List, Optional, Sequence
 
 import datasets
+import numpy as np
+import sentence_transformers
 import torch
 from sentence_transformers import CrossEncoder
 from sklearn.metrics.pairwise import cosine_similarity
 
-from eval.retrieval.e5 import E5
-from eval.retrieval.kv_store import TextType
+from eval.retrieval.kv_store import KVStore, TextType
 from utils import utils
 
 
 DEFAULT_INDEX_PATH = os.path.join("retrieval_indices", "LitSearch.title_abstract.e5")
+
+
+class RagE5(KVStore):
+    """Device-aware E5 index wrapper for the RAG prototype."""
+
+    def __init__(
+        self,
+        index_name: str,
+        model_path: str = "intfloat/e5-large-v2",
+        device: str = "cuda",
+    ) -> None:
+        super().__init__(index_name, "e5")
+        if device == "cuda" and not torch.cuda.is_available():
+            device = "cpu"
+        self.model_path = model_path
+        self.device = device
+        self._model = sentence_transformers.SentenceTransformer(
+            model_path,
+            device=device,
+            cache_folder=os.environ.get("HF_HOME"),
+        )
+
+    def _format_text(self, text: str, type: TextType) -> str:
+        if type == TextType.KEY:
+            return "passage: " + text
+        if type == TextType.QUERY:
+            return "query: " + text
+        raise ValueError("Invalid TextType")
+
+    def _encode_batch(self, texts: List[str], type: TextType, show_progress_bar: bool = True) -> List[np.ndarray]:
+        texts = [self._format_text(text, type) for text in texts]
+        return self._model.encode(
+            texts,
+            batch_size=32,
+            normalize_embeddings=True,
+            show_progress_bar=show_progress_bar,
+        ).astype(np.float16)
+
+    def _query(self, encoded_query: np.ndarray, n: int) -> List[int]:
+        cosine_similarities = cosine_similarity([encoded_query], self.encoded_keys)[0]
+        top_indices = cosine_similarities.argsort()[-n:][::-1]
+        return top_indices
+
+    def load(self, file_path: str) -> "RagE5":
+        if len(self.keys) > 0:
+            raise ValueError("Index is not empty. Clear it before loading.")
+        with open(file_path, "rb") as file:
+            pickle_data = pickle.load(file)
+        for key, value in pickle_data.items():
+            setattr(self, key, value)
+        self._model = sentence_transformers.SentenceTransformer(
+            self.model_path,
+            device=self.device,
+            cache_folder=os.environ.get("HF_HOME"),
+        )
+        return self
 
 
 def load_corpus_records(
@@ -47,16 +105,18 @@ class E5Retriever:
         index_path: str = DEFAULT_INDEX_PATH,
         dataset_path: str = "princeton-nlp/LitSearch",
         local_fallback_path: str = os.path.join("data", "corpus_sample.json"),
+        device: str = "cuda",
     ) -> None:
         self.index_path = index_path
         self.dataset_path = dataset_path
         self.local_fallback_path = local_fallback_path
+        self.device = device
         self.corpus_records = load_corpus_records(dataset_path, local_fallback_path)
         self.corpus_lookup = build_corpus_lookup(self.corpus_records)
         self.index = self._load_or_build_index()
 
-    def _build_in_memory_index(self) -> E5:
-        index = E5(index_name="LitSearch.title_abstract")
+    def _build_in_memory_index(self) -> RagE5:
+        index = RagE5(index_name="LitSearch.title_abstract", device=self.device)
         key_value_pairs = {
             utils.get_clean_title_abstract(record): utils.get_clean_corpusid(record)
             for record in self.corpus_records
@@ -64,9 +124,9 @@ class E5Retriever:
         index.create_index(key_value_pairs)
         return index
 
-    def _load_or_build_index(self) -> E5:
+    def _load_or_build_index(self) -> RagE5:
         if os.path.exists(self.index_path):
-            return E5(index_name="LitSearch.title_abstract").load(self.index_path)
+            return RagE5(index_name="LitSearch.title_abstract", device=self.device).load(self.index_path)
         return self._build_in_memory_index()
 
     def retrieve(self, query_text: str, top_k: int = 100) -> List[Dict[str, object]]:

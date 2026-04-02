@@ -16,6 +16,17 @@ def _first_sentence(text: str) -> str:
     return parts[0].strip() if parts else text
 
 
+def _clean_evidence_sentence(text: str) -> str:
+    text = _first_sentence(text)
+    text = re.sub(
+        r"^(this paper|this study|we|the paper)\s+(studies|study|discuss|discusses|propose|proposes|present|presents)\s+",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return text[:1].lower() + text[1:] if text else ""
+
+
 def _generate_mock_answer(question: str, documents: List[Dict[str, object]]) -> Dict[str, object]:
     if not documents:
         return {
@@ -31,9 +42,9 @@ def _generate_mock_answer(question: str, documents: List[Dict[str, object]]) -> 
     for doc in lead_docs:
         citation = str(doc["doc_id"])
         title = str(doc.get("title", "")).strip()
-        abstract_sentence = _first_sentence(str(doc.get("abstract", "")))
+        abstract_sentence = _clean_evidence_sentence(str(doc.get("abstract", "")))
         if abstract_sentence:
-            evidence_parts.append(f'"{title}" discusses {abstract_sentence.lower()} {citation}')
+            evidence_parts.append(f'"{title}" discusses {abstract_sentence} {citation}')
         else:
             evidence_parts.append(f'"{title}" appears highly relevant {citation}')
         references.append(
