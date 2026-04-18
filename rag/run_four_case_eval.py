@@ -1,4 +1,4 @@
-"""Run a first-round representative validation on four selected questions."""
+"""Run batch RAG evaluation on LitSearch test questions."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,34 +40,65 @@ DEFAULT_CASES = [
     },
 ]
 
+DEFAULT_FOUR_CASE_IDS = [case["case_id"] for case in DEFAULT_CASES]
+TYPE_LABELS = {
+    "method": "方法型",
+    "definition": "定义型",
+    "comparison": "比较型",
+    "recommendation": "推荐型",
+}
+
 
 def _slugify_case(case_id: str) -> str:
     return case_id.lower().replace(" ", "_")
 
 
-def _load_cases(test_question_file: str = "") -> List[Dict[str, str]]:
+def _normalize_question_type(question_type: str) -> str:
+    question_type = (question_type or "").strip()
+    return TYPE_LABELS.get(question_type, question_type or "未标注")
+
+
+def _parse_case_ids(case_ids_text: str) -> List[str]:
+    if not case_ids_text.strip():
+        return []
+    return [item.strip() for item in case_ids_text.split(",") if item.strip()]
+
+
+def _load_cases(
+    test_question_file: str = "",
+    selected_ids: Iterable[str] | None = None,
+    limit: int = 0,
+) -> List[Dict[str, str]]:
+    selected_id_set = {item.strip() for item in (selected_ids or []) if item.strip()}
+
     if not test_question_file:
-        return list(DEFAULT_CASES)
+        cases = list(DEFAULT_CASES)
+    else:
+        with open(test_question_file, "r", encoding="utf-8") as file:
+            loaded = json.load(file)
 
-    with open(test_question_file, "r", encoding="utf-8") as file:
-        loaded = json.load(file)
-
-    selected_ids = {case["case_id"] for case in DEFAULT_CASES}
-    normalized_cases = []
-    for item in loaded:
-        case_id = str(item.get("case_id") or item.get("id") or "")
-        question = str(item.get("question") or item.get("query") or "")
-        if case_id in selected_ids and question:
+        cases = []
+        for item in loaded:
+            case_id = str(item.get("case_id") or item.get("id") or "")
+            question = str(item.get("question") or item.get("query") or "")
+            if not case_id or not question:
+                continue
             question_type = str(item.get("question_type") or item.get("type") or "")
-            normalized_cases.append(
+            cases.append(
                 {
                     "case_id": case_id,
-                    "question_type": question_type,
+                    "question_type": _normalize_question_type(question_type),
                     "question": question,
                 }
             )
 
-    return normalized_cases or list(DEFAULT_CASES)
+    if selected_id_set:
+        cases = [case for case in cases if case["case_id"] in selected_id_set]
+
+    if limit > 0:
+        cases = cases[:limit]
+
+    return cases or list(DEFAULT_CASES)
 
 
 def _build_case_summary(case: Dict[str, str], result: Dict[str, Any]) -> Dict[str, Any]:
@@ -85,9 +116,32 @@ def _build_case_summary(case: Dict[str, str], result: Dict[str, Any]) -> Dict[st
     }
 
 
-def _build_round_analysis(case_summaries: List[Dict[str, Any]], failures: List[Dict[str, str]]) -> Dict[str, Any]:
+def _build_type_breakdown(case_summaries: List[Dict[str, Any]]) -> Dict[str, Any]:
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for summary in case_summaries:
+        question_type = summary["question_type"]
+        bucket = grouped.setdefault(
+            question_type,
+            {
+                "count": 0,
+                "with_references": 0,
+                "case_ids": [],
+            },
+        )
+        bucket["count"] += 1
+        bucket["case_ids"].append(summary["case_id"])
+        if summary["references"]:
+            bucket["with_references"] += 1
+    return grouped
+
+
+def _build_round_analysis(
+    case_summaries: List[Dict[str, Any]],
+    failures: List[Dict[str, str]],
+    total_cases: int,
+) -> Dict[str, Any]:
     success_count = len(case_summaries)
-    stable = success_count == 4 and not failures and all(summary["references"] for summary in case_summaries)
+    stable = success_count == total_cases and not failures and all(summary["references"] for summary in case_summaries)
 
     likely_good = []
     likely_risky = []
@@ -103,16 +157,18 @@ def _build_round_analysis(case_summaries: List[Dict[str, Any]], failures: List[D
     likely_risky = sorted(set(likely_risky))
 
     if stable:
-        expansion_judgement = "可以继续扩展到 16 条，但建议先人工抽查这 4 条的引用相关性。"
+        expansion_judgement = "当前链路稳定，可以继续做更完整的分类型分析和论文写作。"
     else:
-        expansion_judgement = "暂不建议直接扩展到 16 条，应先处理失败样例或引用相关性问题。"
+        expansion_judgement = "建议先处理失败样例或引用相关性问题，再进入更大规模分析。"
 
     return {
         "system_chain_is_stable": stable,
+        "total_cases": total_cases,
         "successful_cases": success_count,
         "failed_cases": failures,
         "better_performing_question_types": likely_good,
         "potentially_problematic_question_types": likely_risky,
+        "type_breakdown": _build_type_breakdown(case_summaries),
         "expansion_recommendation": expansion_judgement,
     }
 
@@ -124,7 +180,7 @@ def _write_text_report(
     analysis: Dict[str, Any],
 ) -> None:
     lines = [
-        "First-Round Four-Case Validation",
+        "Batch RAG Evaluation",
         "",
         "Pipeline:",
         "keywords query understanding + E5 retrieval + rerank(top50) + structured context + mock answer",
@@ -144,9 +200,23 @@ def _write_text_report(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run first-round validation on four representative questions.")
+    parser = argparse.ArgumentParser(description="Run batch RAG evaluation on LitSearch test questions.")
     parser.add_argument("--test_question_file", type=str, default="test_questions.json")
-    parser.add_argument("--output_dir", type=str, default=os.path.join("rag", "results", "four_case_eval"))
+    parser.add_argument("--output_dir", type=str, default=os.path.join("rag", "results", "all_case_eval"))
+    parser.add_argument(
+        "--case_ids",
+        type=str,
+        default="",
+        help="Comma-separated case ids to run, e.g. Q1,Q6,Q11,Q16. Default: run all cases in test_questions.json.",
+    )
+    parser.add_argument(
+        "--preset",
+        type=str,
+        default="all",
+        choices=["all", "four"],
+        help="Use 'four' to run the representative Q1/Q6/Q11/Q16 subset.",
+    )
+    parser.add_argument("--limit", type=int, default=0, help="Optional max number of cases to run after filtering.")
     parser.add_argument("--query_mode", type=str, default="keywords", choices=["original", "keywords"])
     parser.add_argument("--context_strategy", type=str, default="structured", choices=["plain", "structured"])
     parser.add_argument("--answer_backend", type=str, default="mock", choices=["mock", "local"])
@@ -164,7 +234,15 @@ def main() -> None:
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
-    cases = _load_cases(args.test_question_file)
+    selected_ids = _parse_case_ids(args.case_ids)
+    if args.preset == "four" and not selected_ids:
+        selected_ids = list(DEFAULT_FOUR_CASE_IDS)
+
+    cases = _load_cases(
+        test_question_file=args.test_question_file,
+        selected_ids=selected_ids,
+        limit=args.limit,
+    )
 
     full_results = []
     case_summaries = []
@@ -204,16 +282,24 @@ def main() -> None:
             failures.append(
                 {
                     "case_id": case["case_id"],
+                    "question_type": case["question_type"],
                     "question": case["question"],
                     "error": str(exc),
                 }
             )
 
-    analysis = _build_round_analysis(case_summaries, failures)
+    analysis = _build_round_analysis(case_summaries, failures, total_cases=len(cases))
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     summary_json = {
         "run_timestamp": timestamp,
+        "run_scope": {
+            "test_question_file": args.test_question_file,
+            "selected_case_ids": selected_ids,
+            "preset": args.preset,
+            "limit": args.limit,
+            "resolved_case_count": len(cases),
+        },
         "pipeline": {
             "query_mode": args.query_mode,
             "retrieval": "E5",
