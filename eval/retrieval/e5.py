@@ -23,7 +23,14 @@ class E5(KVStore):
     
     def _encode_batch(self, texts: List[str], type: TextType, show_progress_bar: bool = True) -> List[Any]:
         texts = [self._format_text(text, type) for text in texts]
-        return self._model.encode(texts, batch_size=32, normalize_embeddings=True, show_progress_bar=show_progress_bar).astype(np.float16)
+        # Keep the original embedding precision to reduce ranking drift when
+        # comparing against the paper's reported E5 results.
+        return self._model.encode(
+            texts,
+            batch_size=32,
+            normalize_embeddings=True,
+            show_progress_bar=show_progress_bar,
+        ).astype(np.float32)
     
     def _query(self, encoded_query: Any, n: int) -> List[int]:
         cosine_similarities = cosine_similarity([encoded_query], self.encoded_keys)[0]
