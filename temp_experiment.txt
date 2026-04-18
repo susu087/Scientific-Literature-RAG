@@ -1,0 +1,1548 @@
+﻿毕业设计实验
+ 每次运行前需要：
+
+  source /root/autodl-tmp/susu/venv/bin/activate
+
+  export HF_HOME=/root/autodl-tmp/susu/.cache/huggingface
+
+  export HF_ENDPOINT=https://hf-mirror.com
+BM25
+inline_acl = 引文改写 + ACL 来源
+inline_nonacl = 引文改写 + 非 ACL 来源
+manual_acl = ACL 作者手写
+manual_iclr = ICLR 作者手写
+Recall:召回率，所有正确答案，找回了多少
+Hit:前K个结果，是否至少出现了一个正确答案
+MRR：如果第一个正确答案排在第 r位，那么得分是：=1/r
+Recall@10 = 0.5149
+Recall@50 = 0.6668
+Recall@100 = 0.7362
+Hit@10 = 0.5260
+Hit@100 = 0.7487
+MRR@10 = 0.3522
+MRR@100 = 0.3610
+在 LitSearch 数据集上，基于 title_abstract 字段构建 BM25 稀疏检索索引，并对 597 条查询进行评测。实验结果显示，BM25 在该基准上的 Recall@10、Recall@50、Recall@100 分别为 0.5149、0.6668、0.7362，MRR@10 为 0.3522。结果表明，BM25 作为传统关键词匹配方法，能够召回一定比例的相关文献，但在复杂科研文献检索场景下，其排序质量与召回能力仍存在明显局限。LitSearch 论文也报告，最优 dense retriever 在 Recall@5 上显著优于 BM25。
+终端输出
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+PS D:\AAAfinal\LitSearch-main> dir
+Directory: D:\AAAfinal\LitSearch-main
+Mode                 LastWriteTime         Length Name
+d-----         2026/3/15      9:59                .idea
+d-----         2026/3/15      9:35                eval
+d-----         2026/3/15      9:35                utils
+-a----         2024/12/2      8:33           3209 .gitignore
+-a----         2026/3/15     10:00           1672 download_data.py
+-a----         2024/12/2      8:33           1094 LICENSE
+-a----         2024/12/2      8:33           4784 README.md
+PS D:\AAAfinal\LitSearch-main> # 创建虚拟环境
+PS D:\AAAfinal\LitSearch-main> python -m venv venv
+PS D:\AAAfinal\LitSearch-main>
+PS D:\AAAfinal\LitSearch-main> # 激活虚拟环境（Windows）
+PS D:\AAAfinal\LitSearch-main> venv\Scripts\activate
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 确保在虚拟环境中（有 (venv) 前缀）
+(venv) PS D:\AAAfinal\LitSearch-main> pip install datasets
+Collecting datasets
+Using cached https://files.pythonhosted.org/packages/ed/a5/33cf000137545a08b0a3a6ea76c8ccbd87917f78bb5d737f9f56f3b11ef6/datasets-3.1.0-py3-none-any.whl
+Collecting multiprocess<0.70.17 (from datasets)
+Using cached https://files.pythonhosted.org/packages/ea/89/38df130f2c799090c978b366cfdf5b96d08de5b29a4a293df7f7429fa50b/multiprocess-0.70.16-py38-none-any.whl
+Collecting pyarrow>=15.0.0 (from datasets)
+Using cached https://files.pythonhosted.org/packages/d1/db/42ac644453cfdfc60fe002b46d647fe7a6dfad753ef7b28e99b4c936ad5d/pyarrow-17.0.0-cp38-cp38-win_amd64.whl
+Collecting huggingface-hub>=0.23.0 (from datasets)
+Using cached https://files.pythonhosted.org/packages/a8/af/48ac8483240de756d2438c380746e7130d1c6f75802ef22f3c6d49982787/huggingface_hub-0.36.2-py3-none-any.whl
+Collecting packaging (from datasets)
+Using cached https://files.pythonhosted.org/packages/b7/b9/c538f279a4e237a006a2c98387d081e9eb060d203d8ed34467cc0f0b9b53/packaging-26.0-py3-none-any.whl
+Collecting filelock (from datasets)
+Using cached https://files.pythonhosted.org/packages/b9/f8/feced7779d755758a52d1f6635d990b8d98dc0a29fa568bbe0625f18fdf3/filelock-3.16.1-py3-none-any.whl
+Collecting fsspec[http]<=2024.9.0,>=2023.1.0 (from datasets)
+Using cached https://files.pythonhosted.org/packages/1d/a0/6aaea0c2fbea2f89bfd5db25fb1e3481896a423002ebe4e55288907a97a3/fsspec-2024.9.0-py3-none-any.whl
+Collecting numpy>=1.17 (from datasets)
+Using cached https://files.pythonhosted.org/packages/69/65/0d47953afa0ad569d12de5f65d964321c208492064c38fe3b0b9744f8d44/numpy-1.24.4-cp38-cp38-win_amd64.whl
+Collecting pandas (from datasets)
+Using cached https://files.pythonhosted.org/packages/c3/6c/ea362eef61f05553aaf1a24b3e96b2d0603f5dc71a3bd35688a24ed88843/pandas-2.0.3-cp38-cp38-win_amd64.whl
+Collecting xxhash (from datasets)
+Using cached https://files.pythonhosted.org/packages/71/b6/94e2faf4847098bdb77efe75e6e6d8638d1cde77015d099190bbe63bab3f/xxhash-3.6.0-cp38-cp38-win_amd64.whl
+Collecting aiohttp (from datasets)
+Using cached https://files.pythonhosted.org/packages/21/0c/74c895688db09a2852056abf32d128991ec2fb41e5f57a1fe0928e15151c/aiohttp-3.10.11-cp38-cp38-win_amd64.whl
+Collecting dill<0.3.9,>=0.3.0 (from datasets)
+Using cached https://files.pythonhosted.org/packages/c9/7a/cef76fd8438a42f96db64ddaa85280485a9c395e7df3db8158cfec1eee34/dill-0.3.8-py3-none-any.whl
+Collecting requests>=2.32.2 (from datasets)
+Using cached https://files.pythonhosted.org/packages/7c/e4/56027c4a6b4ae70ca9de302488c5ca95ad4a39e190093d6c1a8ace08341b/requests-2.32.4-py3-none-any.whl
+Collecting pyyaml>=5.1 (from datasets)
+Using cached https://files.pythonhosted.org/packages/76/b2/2b69cee94c9eb215216fc05778675c393e3aa541131dc910df8e52c83776/PyYAML-6.0.3-cp38-cp38-win_amd64.whl
+Collecting tqdm>=4.66.3 (from datasets)
+Using cached https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl
+Collecting typing-extensions>=3.7.4.3 (from huggingface-hub>=0.23.0->datasets)
+Using cached https://files.pythonhosted.org/packages/8b/54/b1ae86c0973cc6f0210b53d508ca3641fb6d0c56823f288d108bc7ab3cc8/typing_extensions-4.13.2-py3-none-any.whl
+Collecting pytz>=2020.1 (from pandas->datasets)
+Using cached https://files.pythonhosted.org/packages/10/99/781fe0c827be2742bcc775efefccb3b048a3a9c6ce9aec0cbf4a101677e5/pytz-2026.1.post1-py2.py3-none-any.whl
+Collecting python-dateutil>=2.8.2 (from pandas->datasets)
+Using cached https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
+Collecting tzdata>=2022.1 (from pandas->datasets)
+Using cached https://files.pythonhosted.org/packages/c7/b0/003792df09decd6849a5e39c28b513c06e84436a54440380862b5aeff25d/tzdata-2025.3-py2.py3-none-any.whl
+Collecting yarl<2.0,>=1.12.0 (from aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/9c/9d/d944e897abf37f50f4fa2d8d6f5fd0ed9413bc8327d3b4cc25ba9694e1ba/yarl-1.15.2-cp38-cp38-win_amd64.whl
+Collecting aiosignal>=1.1.2 (from aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/76/ac/a7305707cb852b7e16ff80eaf5692309bde30e2b1100a1fcacdc8f731d97/aiosignal-1.3.1-py3-none-any.whl
+Collecting attrs>=17.3.0 (from aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/77/06/bb80f5f86020c4551da315d78b3ab75e8228f89f0162f2c3a819e407941a/attrs-25.3.0-py3-none-any.whl
+Collecting multidict<7.0,>=4.5 (from aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/90/bf/3d0c1cc9c8163abc24625fae89c0ade1ede9bccb6eceb79edf8cff3cca46/multidict-6.1.0-cp38-cp38-win_amd64.whl
+Collecting frozenlist>=1.1.1 (from aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/0c/90/85bb3547c327f5975078c1be018478d5e8d250a540c828f8f31a35d2a1bd/frozenlist-1.5.0-cp38-cp38-win_amd64.whl
+Collecting async-timeout<6.0,>=4.0; python_version < "3.11" (from aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl
+Collecting aiohappyeyeballs>=2.3.0 (from aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/b9/74/fbb6559de3607b3300b9be3cc64e97548d55678e44623db17820dbd20002/aiohappyeyeballs-2.4.4-py3-none-any.whl
+Collecting certifi>=2017.4.17 (from requests>=2.32.2->datasets)
+Using cached https://files.pythonhosted.org/packages/9a/3c/c17fb3ca2d9c3acff52e30b309f538586f9f5b9c9cf454f3845fc9af4881/certifi-2026.2.25-py3-none-any.whl
+Collecting urllib3<3,>=1.21.1 (from requests>=2.32.2->datasets)
+Using cached https://files.pythonhosted.org/packages/ce/d9/5f4c13cecde62396b0d3fe530a50ccea91e7dfc1ccf0e09c228841bb5ba8/urllib3-2.2.3-py3-none-any.whl
+Collecting idna<4,>=2.5 (from requests>=2.32.2->datasets)
+Using cached https://files.pythonhosted.org/packages/0e/61/66938bbb5fc52dbdf84594873d5b51fb1f7c7794e9c0f5bd885f30bc507b/idna-3.11-py3-none-any.whl
+Collecting charset_normalizer<4,>=2 (from requests>=2.32.2->datasets)
+Downloading https://files.pythonhosted.org/packages/b7/ac/a2d96bbfe46b532353e8b2c09a60eaf2e2c904d6f6aa909e865b5c53404b/charset_normalizer-3.4.5-cp38-cp38-win_amd64.whl (140kB)
+|████████████████████████████████| 143kB 45kB/s
+Collecting colorama; platform_system == "Windows" (from tqdm>=4.66.3->datasets)
+Using cached https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl
+Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas->datasets)
+Using cached https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl
+Collecting propcache>=0.2.0 (from yarl<2.0,>=1.12.0->aiohttp->datasets)
+Using cached https://files.pythonhosted.org/packages/37/23/a30214b4c1f2bea24cc1197ef48d67824fbc41d5cf5472b17c37fef6002c/propcache-0.2.0-cp38-cp38-win_amd64.whl
+Installing collected packages: dill, multiprocess, numpy, pyarrow, propcache, idna, typing-ext
+ensions, multidict, yarl, frozenlist, aiosignal, attrs, async-timeout, aiohappyeyeballs, aioht
+tp, fsspec, filelock, colorama, tqdm, certifi, urllib3, charset-normalizer, requests, pyyaml, packaging, huggingface-hub, pytz, six, python-dateutil, tzdata, pandas, xxhash, datasets
+Successfully installed aiohappyeyeballs-2.4.4 aiohttp-3.10.11 aiosignal-1.3.1 async-timeout-5.
+0.1 attrs-25.3.0 certifi-2026.2.25 charset-normalizer-3.4.5 colorama-0.4.6 datasets-3.1.0 dill
+-0.3.8 filelock-3.16.1 frozenlist-1.5.0 fsspec-2024.9.0 huggingface-hub-0.36.2 idna-3.11 multi
+dict-6.1.0 multiprocess-0.70.16 numpy-1.24.4 packaging-26.0 pandas-2.0.3 propcache-0.2.0 pyarr
+ow-17.0.0 python-dateutil-2.9.0.post0 pytz-2026.1.post1 pyyaml-6.0.3 requests-2.32.4 six-1.17.0 tqdm-4.67.3 typing-extensions-4.13.2 tzdata-2025.3 urllib3-2.2.3 xxhash-3.6.0 yarl-1.15.2
+WARNING: You are using pip version 19.2.3, however version 25.0.1 is available.
+You should consider upgrading via the 'python -m pip install --upgrade pip' command.
+(venv) PS D:\AAAfinal\LitSearch-main> # 确保在虚拟环境中（有 (venv) 前缀）
+(venv) PS D:\AAAfinal\LitSearch-main> pip install datasets
+Requirement already satisfied: datasets in d:\aaafinal\litsearch-main\venv\lib\site-packages (3.1.0)
+Requirement already satisfied: huggingface-hub>=0.23.0 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (0.36.2)
+Requirement already satisfied: tqdm>=4.66.3 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (4.67.3)
+Requirement already satisfied: pyyaml>=5.1 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (6.0.3)
+Requirement already satisfied: fsspec[http]<=2024.9.0,>=2023.1.0 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (2024.9.0)
+Requirement already satisfied: numpy>=1.17 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (1.24.4)
+Requirement already satisfied: packaging in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (26.0)
+Requirement already satisfied: pandas in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (2.0.3)
+Requirement already satisfied: filelock in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (3.16.1)
+Requirement already satisfied: requests>=2.32.2 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (2.32.4)
+Requirement already satisfied: dill<0.3.9,>=0.3.0 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (0.3.8)
+Requirement already satisfied: aiohttp in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (3.10.11)
+Requirement already satisfied: xxhash in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (3.6.0)
+Requirement already satisfied: pyarrow>=15.0.0 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (17.0.0)
+Requirement already satisfied: multiprocess<0.70.17 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from datasets) (0.70.16)
+Requirement already satisfied: typing-extensions>=3.7.4.3 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from huggingface-hub>=0.23.0->datasets) (4.13.2)
+Requirement already satisfied: colorama; platform_system == "Windows" in d:\aaafinal\litsearch-main\venv\lib\site-packages (from tqdm>=4.66.3->datasets) (0.4.6)
+Requirement already satisfied: tzdata>=2022.1 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from pandas->datasets) (2025.3)
+Requirement already satisfied: pytz>=2020.1 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from pandas->datasets) (2026.1.post1)
+Requirement already satisfied: async-timeout<6.0,>=4.0; python_version < "3.11" in d:\aaafinal\litsearch-main\venv\lib\site-packages (from aiohttp->datasets) (5.0.1)
+Requirement already satisfied: attrs>=17.3.0 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from aiohttp->datasets) (25.3.0)
+Requirement already satisfied: multidict<7.0,>=4.5 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from aiohttp->datasets) (6.1.0)
+Requirement already satisfied: aiohappyeyeballs>=2.3.0 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from aiohttp->datasets) (2.4.4)
+Requirement already satisfied: six>=1.5 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from python-dateutil>=2.8.2->pandas->datasets) (1.17.0)
+Requirement already satisfied: propcache>=0.2.0 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from yarl<2.0,>=1.12.0->aiohttp->datasets) (0.2.0)
+WARNING: You are using pip version 19.2.3, however version 25.0.1 is available.
+You should consider upgrading via the 'python -m pip install --upgrade pip' command.
+(venv) PS D:\AAAfinal\LitSearch-main> pip install tqdm
+Requirement already satisfied: tqdm in d:\aaafinal\litsearch-main\venv\lib\site-packages (4.67.3)
+Requirement already satisfied: colorama; platform_system == "Windows" in d:\aaafinal\litsearch-main\venv\lib\site-packages (from tqdm) (0.4.6)
+WARNING: You are using pip version 19.2.3, however version 25.0.1 is available.
+You should consider upgrading via the 'python -m pip install --upgrade pip' command.
+(venv) PS D:\AAAfinal\LitSearch-main> # 在 PowerShell 中执行（确保在虚拟环境中）
+(venv) PS D:\AAAfinal\LitSearch-main> python -m pip install --upgrade pip
+Collecting pip
+Downloading https://files.pythonhosted.org/packages/c9/bc/b7db44f5f39f9d0494071bddae6880eb645970366d0a200022a1a93d57f5/pip-25.0.1-py3-none-any.whl (1.8MB)
+|████████████████████████████████| 1.8MB 23kB/s
+Installing collected packages: pip
+Found existing installation: pip 19.2.3
+Uninstalling pip-19.2.3:
+Successfully uninstalled pip-19.2.3
+Successfully installed pip-25.0.1
+(venv) PS D:\AAAfinal\LitSearch-main> # 设置镜像加速
+(venv) PS D:\AAAfinal\LitSearch-main> $env:HF_ENDPOINT = "https://hf-mirror.com"
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 或者使用国内镜像
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 确保在虚拟环境中
+(venv) PS D:\AAAfinal\LitSearch-main> python download_data.py
+==================================================
+Downloading LitSearch dataset...
+==================================================
+Downloading queries...
+Downloaded 597 queries
+Saved to data/queries.json
+Downloading clean corpus...
+Downloaded 64183 papers
+Sample saved to data/corpus_sample.json
+==================================================
+Download complete!
+==================================================
+Dataset Statistics:
+Queries: 597
+Corpus (clean): 64183
+Sample Query:
+Query: Are there any research papers on methods to compress large-scale language models using task-agnostic knowledge distillation techniques?
+Relevant papers: []
+(venv) PS D:\AAAfinal\LitSearch-main> $env:HF_ENDPOINT = "https://hf-mirror.com"; python download_data.py
+==================================================
+Downloading LitSearch dataset...
+==================================================
+Downloading queries...
+Downloaded 597 queries
+Saved to data/queries.json
+Downloading clean corpus...
+Downloaded 64183 papers
+Sample saved to data/corpus_sample.json
+==================================================
+Download complete!
+==================================================
+Dataset Statistics:
+Queries: 597
+Corpus (clean): 64183
+Sample Query:
+Query: Are there any research papers on methods to compress large-scale language models using task-agnostic knowledge distillation techniques?
+Relevant papers: []
+(venv) PS D:\AAAfinal\LitSearch-main> # 1. 安装 BM25 所需的依赖（如果还没安装）
+(venv) PS D:\AAAfinal\LitSearch-main> pip install rank-bm25 scikit-learn nltk
+Collecting rank-bm25
+Downloading rank_bm25-0.2.2-py3-none-any.whl.metadata (3.2 kB)
+Collecting scikit-learn
+Downloading scikit_learn-1.3.2-cp38-cp38-win_amd64.whl.metadata (11 kB)
+Collecting nltk
+Downloading nltk-3.9.1-py3-none-any.whl.metadata (2.9 kB)
+Requirement already satisfied: numpy in d:\aaafinal\litsearch-main\venv\lib\site-packages (from rank-bm25) (1.24.4)
+Collecting scipy>=1.5.0 (from scikit-learn)
+Downloading scipy-1.10.1-cp38-cp38-win_amd64.whl.metadata (58 kB)
+Collecting joblib>=1.1.1 (from scikit-learn)
+Downloading joblib-1.4.2-py3-none-any.whl.metadata (5.4 kB)
+Collecting threadpoolctl>=2.0.0 (from scikit-learn)
+Collecting threadpoolctl>=2.0.0 (from scikit-learn)
+Downloading threadpoolctl-3.5.0-py3-none-any.whl.metadata (13 kB)
+Collecting click (from nltk)
+Downloading click-8.1.8-py3-none-any.whl.metadata (2.3 kB)
+Collecting regex>=2021.8.3 (from nltk)
+Downloading regex-2024.11.6-cp38-cp38-win_amd64.whl.metadata (41 kB)
+Requirement already satisfied: tqdm in d:\aaafinal\litsearch-main\venv\lib\site-packages (from nltk) (4.67.3)
+Requirement already satisfied: colorama in d:\aaafinal\litsearch-main\venv\lib\site-packages (from click->nltk) (0.4.6)
+Downloading rank_bm25-0.2.2-py3-none-any.whl (8.6 kB)
+Downloading scikit_learn-1.3.2-cp38-cp38-win_amd64.whl (9.3 MB)
+━━━━━━━━━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━ 4.7/9.3 MB 63.4 kB/s eta 0:01:12
+ERROR: Exception:
+Traceback (most recent call last):
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_vendor\urllib3\response.py", line 438, in _error_catcher
+yield
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_vendor\urllib3\response.py", line 561, in read
+data = self._fp_read(amt) if not fp_closed else b""
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_vendor\urllib3\response.py", line 527, in _fp_read
+return self._fp.read(amt) if amt is not None else self._fp.read()
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_vendor\cachecontrol\filewrapper.py", line 98, in read
+data: bytes = self.__fp.read(amt)
+File "D:\Python\Python38\lib\http\client.py", line 454, in read
+n = self.readinto(b)
+File "D:\Python\Python38\lib\http\client.py", line 498, in readinto
+n = self.fp.readinto(b)
+File "D:\Python\Python38\lib\socket.py", line 669, in readinto
+return self._sock.recv_into(b)
+File "D:\Python\Python38\lib\ssl.py", line 1241, in recv_into
+return self.read(nbytes, buffer)
+File "D:\Python\Python38\lib\ssl.py", line 1099, in read
+return self._sslobj.read(len, buffer)
+ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+During handling of the above exception, another exception occurred:
+Traceback (most recent call last):
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\cli\base_command.py", line 106, in _run_wrapper
+status = _inner_run()
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\cli\base_command.py", line 97, in _inner_run
+return self.run(options, args)
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\cli\req_command.py", line 67, in wrapper
+return func(self, options, args)
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\commands\install.py", line 386, in run
+requirement_set = resolver.resolve(
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\resolution\resolvelib\resolver.py", line 179, in resolve
+self.factory.preparer.prepare_linked_requirements_more(reqs)
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\operations\prepare.py", line 554, in prepare_linked_requirements_more
+self._complete_partial_requirements(
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\operations\prepare.py", line 469, in _complete_partial_requirements
+for link, (filepath, _) in batch_download:
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\network\download.py", line 184, in call
+for chunk in chunks:
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\cli\progress_bars.py", line 55, in _rich_progress_bar
+for chunk in iterable:
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_internal\network\utils.py", line 65, in response_chunks
+for chunk in response.raw.stream(
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_vendor\urllib3\response.py", line 622, in stream
+data = self.read(amt=amt, decode_content=decode_content)
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_vendor\urllib3\response.py", line 587, in read
+raise IncompleteRead(self._fp_bytes_read, self.length_remaining)
+File "D:\Python\Python38\lib\contextlib.py", line 131, in exit
+self.gen.throw(type, value, traceback)
+File "d:\aaafinal\litsearch-main\venv\lib\site-packages\pip_vendor\urllib3\response.py", line 455, in _error_catcher
+raise ProtocolError("Connection broken: %r" % e, e)
+pip._vendor.urllib3.exceptions.ProtocolError: ("Connection broken: ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None)", ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None))
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 2. 下载 NLTK 数据（BM25分词需要）
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
+Traceback (most recent call last):
+File " ", line 1, in  
+ModuleNotFoundError: No module named 'nltk'
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 3. 构建 BM25 索引（这步会处理6万多篇论文，需要一些时间）
+(venv) PS D:\AAAfinal\LitSearch-main> python -m eval.retrieval.build_index --index_type bm25 --key title_abstract
+Traceback (most recent call last):
+File "D:\Python\Python38\lib\runpy.py", line 193, in _run_module_as_main
+return _run_code(code, main_globals, None,
+File "D:\Python\Python38\lib\runpy.py", line 86, in _run_code
+exec(code, run_globals)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\build_index.py", line 5, in  
+from utils import utils
+File "D:\AAAfinal\LitSearch-main\utils\utils.py", line 5, in  
+from utils.openai_utils import OPENAIBaseEngine
+File "D:\AAAfinal\LitSearch-main\utils\openai_utils.py", line 1, in  
+import openai
+ModuleNotFoundError: No module named 'openai'
+(venv) PS D:\AAAfinal\LitSearch-main> # 使用国内镜像源单独安装 nltk
+(venv) PS D:\AAAfinal\LitSearch-main> pip install -i https://pypi.tuna.tsinghua.edu.cn/simple nltk
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Collecting nltk
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4d/66/7d9e26593edda06e8cb531874633f7c2372279c3b0f46235539fe546df8b/nltk-3.9.1-py3-none-any.whl (1.5 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 6.6 MB/s eta 0:00:00
+Collecting click (from nltk)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl (98 kB)
+Collecting joblib (from nltk)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl (301 kB)
+Collecting regex>=2021.8.3 (from nltk)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/cf/69/c39e16320400842eb4358c982ef5fc680800866f35ebfd4dd38a22967ce0/regex-2024.11.6-cp38-cp38-win_amd64.whl (274 kB)
+Requirement already satisfied: tqdm in d:\aaafinal\litsearch-main\venv\lib\site-packages (from nltk) (4.67.3)
+Requirement already satisfied: colorama in d:\aaafinal\litsearch-main\venv\lib\site-packages (from click->nltk) (0.4.6)
+Installing collected packages: regex, joblib, click, nltk
+Successfully installed click-8.1.8 joblib-1.4.2 nltk-3.9.1 regex-2024.11.6
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 验证安装
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import nltk; print('nltk installed successfully')"
+nltk installed successfully
+(venv) PS D:\AAAfinal\LitSearch-main> # 使用清华镜像安装，更稳定
+(venv) PS D:\AAAfinal\LitSearch-main> pip install -i https://pypi.tuna.tsinghua.edu.cn/simple rank-bm25 scikit-learn
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Collecting rank-bm25
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2a/21/f691fb2613100a62b3fa91e9988c991e9ca5b89ea31c0d3152a3210344f9/rank_bm25-0.2.2-py3-none-any.whl (8.6 kB)
+Collecting scikit-learn
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/52/2d/ad6928a578c78bb0e44e34a5a922818b14c56716b81d145924f1f291416f/scikit_learn-1.3.2-cp38-cp38-win_amd64.whl (9.3 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.3/9.3 MB 682.9 kB/s eta 0:00:00
+Requirement already satisfied: numpy in d:\aaafinal\litsearch-main\venv\lib\site-packages (from rank-bm25) (1.24.4)
+Collecting scipy>=1.5.0 (from scikit-learn)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/32/8e/7f403535ddf826348c9b8417791e28712019962f7e90ff845896d6325d09/scipy-1.10.1-cp38-cp38-win_amd64.whl (42.2 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 42.2/42.2 MB 1.4 MB/s eta 0:00:00
+Requirement already satisfied: joblib>=1.1.1 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from scikit-learn) (1.4.2)
+Collecting threadpoolctl>=2.0.0 (from scikit-learn)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4b/2c/ffbf7a134b9ab11a67b0cf0726453cedd9c5043a4fe7a35d1cefa9a1bcfb/threadpoolctl-3.5.0-py3-none-any.whl (18 kB)
+Installing collected packages: threadpoolctl, scipy, rank-bm25, scikit-learn
+Successfully installed rank-bm25-0.2.2 scikit-learn-1.3.2 scipy-1.10.1 threadpoolctl-3.5.0
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 如果还是超时，可以尝试设置超时时间更长
+(venv) PS D:\AAAfinal\LitSearch-main> # 安装 openai 包（不需要 API 密钥也能安装）
+(venv) PS D:\AAAfinal\LitSearch-main> pip install -i https://pypi.tuna.tsinghua.edu.cn/simple openai
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Collecting openai
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/8c/74/6bfc3adc81f6c2cea4439f2a734c40e3a420703bbcdc539890096a732bbd/openai-2.7.1-py3-none-any.whl (1.0 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 7.9 MB/s eta 0:00:00
+Collecting anyio<5,>=3.5.0 (from openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/1b/b4/f7e396030e3b11394436358ca258a81d6010106582422f23443c16ca1873/anyio-4.5.2-py3-none-any.whl (89 kB)
+Collecting distro<2,>=1.7.0 (from openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl (20 kB)
+Collecting httpx<1,>=0.23.0 (from openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl (73 kB)
+INFO: pip is looking at multiple versions of openai to determine which version is compatible with other requirements. This could take a while.
+Collecting openai
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/fc/0f/e9618a92a9497846a3071f2a7ed43409215947106c7e5ce7d082f784de10/openai-2.7.0-py3-none-any.whl (1.0 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 356.5 kB/s eta 0:00:00
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/15/0e/331df43df633e6105ff9cf45e0ce57762bd126a45ac16b25a43f6738d8a2/openai-2.6.1-py3-none-any.whl (1.0 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 3.0 MB/s eta 0:00:00
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/c0/0a/58e9dcd34abe273eaeac3807a8483073767b5609d01bb78ea2f048e515a0/openai-2.6.0-py3-none-any.whl (1.0 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 5.3 MB/s eta 0:00:00
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/14/f3/ebbd700d8dc1e6380a7a382969d96bc0cbea8717b52fb38ff0ca2a7653e8/openai-2.5.0-py3-none-any.whl (999 kB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 999.9/999.9 kB 674.3 kB/s eta 0:00:00
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/d8/f6/68a8bbb62c001e5580de6b89372ddab03c3484ac3e251c298a30da094f5e/openai-2.4.0-py3-none-any.whl (1.0 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 4.7 MB/s eta 0:00:00
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9c/5b/4be258ff072ed8ee15f6bfd8d5a1a4618aa4704b127c0c5959212ad177d6/openai-2.3.0-py3-none-any.whl (999 kB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 999.8/999.8 kB 6.7 MB/s eta 0:00:00
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/cb/92/6aeef1836e66dfec7f7f160a4f06d7041be7f6ccfc47a2f0f5738b332245/openai-2.2.0-py3-none-any.whl (998 kB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 999.0/999.0 kB 4.3 MB/s eta 0:00:00
+Collecting jiter<1,>=0.4.0 (from openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9b/5d/b6f0cd60c8f702936f253644a92dee19e2c82010290e4607af462033351f/jiter-0.9.1-cp38-cp38-win_amd64.whl (199 kB)
+Collecting pydantic<3,>=1.9.0 (from openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f4/3c/8cc1cc84deffa6e25d2d0c688ebb80635dfdbf1dbea3e30c541c8cf4d860/pydantic-2.10.6-py3-none-any.whl (431 kB)
+Collecting sniffio (from openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl (10 kB)
+Requirement already satisfied: tqdm>4 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from openai) (4.67.3)
+Requirement already satisfied: typing-extensions<5,>=4.11 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from openai) (4.13.2)
+Requirement already satisfied: idna>=2.8 in d:\aaafinal\litsearch-main\venv\lib\site-packages (from anyio<5,>=3.5.0->openai) (3.11)
+Collecting exceptiongroup>=1.0.2 (from anyio<5,>=3.5.0->openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/8a/0e/97c33bf5009bdbac74fd2beace167cab3f978feb69cc36f1ef79360d6c4e/exceptiongroup-1.3.1-py3-none-any.whl (16 kB)
+Requirement already satisfied: certifi in d:\aaafinal\litsearch-main\venv\lib\site-packages (from httpx<1,>=0.23.0->openai) (2026.2.25)
+Collecting httpcore==1.* (from httpx<1,>=0.23.0->openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl (78 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx<1,>=0.23.0->openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl (37 kB)
+Collecting annotated-types>=0.6.0 (from pydantic<3,>=1.9.0->openai)
+Downloading https://pypi.tuna.tsinghua.edu.cn/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Collecting pydantic-core==2.27.2 (from pydantic<3,>=1.9.0->openai)
+d64.whl (2.0 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 5.0 MB/s eta 0:00:00
+Requirement already satisfied: colorama in d:\aaafinal\litsearch-main\venv\lib\site-packages (from tqdm>4->openai) (0.4.6)
+Installing collected packages: sniffio, pydantic-core, jiter, h11, exceptiongroup, distro, annotated-types, pydantic, httpcore, anyio, httpx, openai
+Successfully installed annotated-types-0.7.0 anyio-4.5.2 distro-1.9.0 exceptiongroup-1.3.1 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 jiter-0.9.1 openai-2.2.0 pydantic-2.10.6 pydantic-core-2.27.2 sniffio-1.3.1
+(venv) PS D:\AAAfinal\LitSearch-main> # 现在 nltk 安装好了，可以下载数据
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
+[nltk_data] Downloading package punkt to
+[nltk_data]     C:\Users\15130\AppData\Roaming\nltk_data...
+Traceback (most recent call last):
+File " ", line 1, in  
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 774, in download
+for msg in self.incr_download(info_or_id, download_dir, force):
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 642, in incr_download
+yield from self._download_package(info, download_dir, force)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 710, in _download_package
+s = infile.read(1024 * 16)  # 16k blocks.
+File "D:\Python\Python38\lib\http\client.py", line 454, in read
+n = self.readinto(b)
+File "D:\Python\Python38\lib\http\client.py", line 498, in readinto
+n = self.fp.readinto(b)
+File "D:\Python\Python38\lib\socket.py", line 669, in readinto
+return self._sock.recv_into(b)
+File "D:\Python\Python38\lib\ssl.py", line 1241, in recv_into
+return self.read(nbytes, buffer)
+File "D:\Python\Python38\lib\ssl.py", line 1099, in read
+return self._sslobj.read(len, buffer)
+KeyboardInterrupt
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import nltk; nltk.download('punkt', quiet=False); nltk.download('stopwords', quiet=False)"
+[nltk_data] Downloading package punkt to
+[nltk_data]     C:\Users\15130\AppData\Roaming\nltk_data...
+Traceback (most recent call last):
+File " ", line 1, in  
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 774, in download
+for msg in self.incr_download(info_or_id, download_dir, force):
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 642, in incr_download
+yield from self._download_package(info, download_dir, force)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 710, in _download_package
+s = infile.read(1024 * 16)  # 16k blocks.
+File "D:\Python\Python38\lib\http\client.py", line 454, in read
+n = self.readinto(b)
+File "D:\Python\Python38\lib\http\client.py", line 498, in readinto
+n = self.fp.readinto(b)
+File "D:\Python\Python38\lib\socket.py", line 669, in readinto
+return self._sock.recv_into(b)
+File "D:\Python\Python38\lib\ssl.py", line 1241, in recv_into
+return self.read(nbytes, buffer)
+File "D:\Python\Python38\lib\ssl.py", line 1099, in read
+return self._sslobj.read(len, buffer)
+KeyboardInterrupt
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import nltk,ssl; ssl._create_default_https_context = ssl._create_unverified_context; nltk.downloader.DEFAULT_URL='https://mirrors.tuna.tsinghua.edu.cn/nltk_data/'; nltk.download('punkt', quiet=False); nltk.download('stopwords', quiet=False)"
+[nltk_data] Downloading package punkt to
+[nltk_data]     C:\Users\15130\AppData\Roaming\nltk_data...
+Traceback (most recent call last):
+File " ", line 1, in  
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 774, in download
+for msg in self.incr_download(info_or_id, download_dir, force):
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 642, in incr_download
+yield from self._download_package(info, download_dir, force)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 710, in _download_package
+s = infile.read(1024 * 16)  # 16k blocks.
+File "D:\Python\Python38\lib\http\client.py", line 454, in read
+n = self.readinto(b)
+File "D:\Python\Python38\lib\http\client.py", line 498, in readinto
+n = self.fp.readinto(b)
+File "D:\Python\Python38\lib\socket.py", line 669, in readinto
+return self._sock.recv_into(b)
+File "D:\Python\Python38\lib\ssl.py", line 1241, in recv_into
+return self.read(nbytes, buffer)
+File "D:\Python\Python38\lib\ssl.py", line 1099, in read
+return self._sslobj.read(len, buffer)
+KeyboardInterrupt
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import urllib.request,zipfile,os,ssl; ssl._create_default_https_context = ssl._create_unverified_context; target_dir='C:\Users\15130\AppData\Roaming\nltk_data'; os.makedirs(f'{target_dir}/tokenizers', exist_ok=True); os.makedirs(f'{target_dir}/corpora', exist_ok=True); print('下载 punkt...'); urllib.request.urlretrieve('https://raw.githubusercontt.com/nltk/nltk_data/gh-pages/packages/tokenizers/punkt.zip', f'{target_dir}/punkt.zip'); print('解压 punkt...'); with zipfile.ZipFile(f'{target_dir}/punkt.zip', 'r') as z: z.extractall(f'{target_dir}/kenizers'); print('下载 stopwords...'); urllib.request.urlretrieve('https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/stopwords.zip', f'{target_dir}/stopwords.zip'); print('解压opwords...'); with zipfile.ZipFile(f'{target_dir}/stopwords.zip', 'r') as z: z.extractall(f'{target_dir}/corpora'); os.remove(f'{target_dir}/punkt.zip'); os.remove(f'{target_dir}/stopwords.zip'); print('全部完成！')"
+File " ", line 1
+import urllib.request,zipfile,os,ssl; ssl._create_default_https_context = ssl._create_unverified_context; target_dir='C:\Users\15130\AppData\Roaming\nltk_data'; os.makedirs(f'{target_dir}/toke
+nizers', exist_ok=True); os.makedirs(f'{target_dir}/corpora', exist_ok=True); print('下载 punkt...'); urllib.request.urlretrieve('https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/toke
+nizers/punkt.zip', f'{target_dir}/punkt.zip'); print('解压 punkt...'); with zipfile.ZipFile(f'{target_dir}/punkt.zip', 'r') as z: z.extractall(f'{target_dir}/tokenizers'); print('下载 stopwords...'); u
+rllib.request.urlretrieve('https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/corpora/stopwords.zip', f'{target_dir}/stopwords.zip'); print('解压 stopwords...'); with zipfile.ZipFile(f'{target_dir}/stopwords.zip', 'r') as z: z.extractall(f'{target_dir}/corpora'); os.remove(f'{target_dir}/punkt.zip'); os.remove(f'{target_dir}/stopwords.zip'); print('全部完成！')
+SyntaxError: invalid syntax
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import nltk; print('punkt:', nltk.data.find('tokenizers/punkt')); print('stopwords:', nltk.data.find('corpora/stopwords'))"/
+punkt: C:\Users\15130\AppData\Roaming\nltk_data\tokenizers\punkt
+stopwords: C:\Users\15130\AppData\Roaming\nltk_data\corpora\stopwords
+(venv) PS D:\AAAfinal\LitSearch-main> python -m eval.retrieval.build_index --index_type bm25 --key title_abstract
+[nltk_data] Downloading package punkt to
+[nltk_data]     C:\Users\15130\AppData\Roaming\nltk_data...
+Traceback (most recent call last):
+File "D:\Python\Python38\lib\runpy.py", line 193, in _run_module_as_main
+return _run_code(code, main_globals, None,
+File "D:\Python\Python38\lib\runpy.py", line 86, in _run_code
+exec(code, run_globals)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\build_index.py", line 77, in  
+index = create_index(args)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\build_index.py", line 16, in create_index
+index = BM25(index_name)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\bm25.py", line 13, in init
+try:
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 774, in download
+for msg in self.incr_download(info_or_id, download_dir, force):
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 642, in incr_download
+yield from self._download_package(info, download_dir, force)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\downloader.py", line 710, in _download_package
+s = infile.read(1024 * 16)  # 16k blocks.
+File "D:\Python\Python38\lib\http\client.py", line 454, in read
+n = self.readinto(b)
+File "D:\Python\Python38\lib\http\client.py", line 498, in readinto
+File "D:\Python\Python38\lib\socket.py", line 669, in readinto
+return self._sock.recv_into(b)
+File "D:\Python\Python38\lib\ssl.py", line 1241, in recv_into
+return self.read(nbytes, buffer)
+File "D:\Python\Python38\lib\ssl.py", line 1099, in read
+return self._sslobj.read(len, buffer)
+KeyboardInterrupt
+(venv) PS D:\AAAfinal\LitSearch-main> python -m eval.retrieval.build_index --index_type bm25 --key title_abstract
+NLTK data found, skipping download
+Creating LitSearch.title_abstract index: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 57657/57657 [00:00<00:00, 3618003.71it/s]
+0%|                                                                                                                                                                         | 0/57657 [00:00<?, ?it/s]
+Traceback (most recent call last):
+File "D:\Python\Python38\lib\runpy.py", line 193, in _run_module_as_main
+return _run_code(code, main_globals, None,
+File "D:\Python\Python38\lib\runpy.py", line 86, in _run_code
+exec(code, run_globals)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\build_index.py", line 79, in  
+index.create_index(kv_pairs)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\bm25.py", line 48, in create_index
+super().create_index(key_value_pairs)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\kv_store.py", line 44, in create_index
+self.encoded_keys = self._encode_batch(self.keys, TextType.KEY)
+File "D:\AAAfinal\LitSearch-main\eval\retrieval\bm25.py", line 33, in _encode_batch
+tokens = self._tokenizer(text.lower())
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\tokenize_init_.py", line 142, in word_tokenize
+sentences = [text] if preserve_line else sent_tokenize(text, language)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\tokenize_init_.py", line 119, in sent_tokenize
+tokenizer = _get_punkt_tokenizer(language)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\tokenize_init_.py", line 105, in _get_punkt_tokenizer
+return PunktTokenizer(language)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\tokenize\punkt.py", line 1744, in init
+self.load_lang(lang)
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\tokenize\punkt.py", line 1749, in load_lang
+lang_dir = find(f"tokenizers/punkt_tab/{lang}/")
+File "D:\AAAfinal\LitSearch-main\venv\lib\site-packages\nltk\data.py", line 579, in find
+raise LookupError(resource_not_found)
+LookupError:
+Resource punkt_tab not found.
+Please use the NLTK Downloader to obtain the resource:
+import nltk
+nltk.download('punkt_tab')
+For more information see: https://www.nltk.org/data.html
+Attempted to load tokenizers/punkt_tab/english/
+Searched in:
+- 'C:\Users\15130/nltk_data'
+- 'D:\AAAfinal\LitSearch-main\venv\nltk_data'
+- 'D:\AAAfinal\LitSearch-main\venv\share\nltk_data'
+- 'D:\AAAfinal\LitSearch-main\venv\lib\nltk_data'
+- 'C:\Users\15130\AppData\Roaming\nltk_data'
+- 'C:\nltk_data'
+- 'D:\nltk_data'
+- 'E:\nltk_data'
+(venv) PS D:\AAAfinal\LitSearch-main> # 下载 punkt_tab（新版本需要）
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "import nltk; nltk.download('punkt_tab')"
+[nltk_data] Downloading package punkt_tab to
+[nltk_data]     C:\Users\15130\AppData\Roaming\nltk_data...
+[nltk_data]   Unzipping tokenizers\punkt_tab.zip.
+(venv) PS D:\AAAfinal\LitSearch-main>
+(venv) PS D:\AAAfinal\LitSearch-main> # 验证下载
+(venv) PS D:\AAAfinal\LitSearch-main> python -c "
+import nltk
+try:
+nltk.data.find('tokenizers/punkt_tab')
+print('✓ punkt_tab 已安装')
+except LookupError as e:
+print('✗ punkt_tab 未安装')
+"
+✓ punkt_tab 已安装
+(venv) PS D:\AAAfinal\LitSearch-main> python -m eval.retrieval.build_index --index_type bm25 --key title_abstract
+NLTK data found, skipping download
+Creating LitSearch.title_abstract index: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 57657/57657 [00:00<00:00, 3602642.58it/s]
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 57657/57657 [01:21<00:00, 706.31it/s]
+Saving index to retrieval_indices\LitSearch.title_abstract.bm25
+(venv) PS D:\AAAfinal\LitSearch-main> dir eval\retrieval
+Directory: D:\AAAfinal\LitSearch-main\eval\retrieval
+Mode                 LastWriteTime         Length Name
+d-----         2026/3/15     11:03                pycache
+-a----         2026/3/15     11:03           2270 bm25.py
+-a----         2024/12/2      8:33           3751 build_index.py
+-a----         2024/12/2      8:33           1648 e5.py
+-a----         2024/12/2      8:33           1926 evaluate_index.py
+-a----         2024/12/2      8:33           1882 grit.py
+-a----         2024/12/2      8:33           1266 gtr.py
+-a----         2024/12/2      8:33           1759 instructor.py
+-a----         2024/12/2      8:33           2760 kv_store.py
+(venv) PS D:\AAAfinal\LitSearch-main> python -m eval.retrieval.evaluate_index --index_type bm25 --key title_abstract
+usage: evaluate_index.py [-h] --index_name INDEX_NAME [--top_k TOP_K] [--retrieval_results_root_dir RETRIEVAL_RESULTS_ROOT_DIR] [--index_root_dir INDEX_ROOT_DIR] [--dataset_path DATASET_PATH]
+evaluate_index.py: error: the following arguments are required: --index_name
+(venv) PS D:\AAAfinal\LitSearch-main> python -m eval.retrieval.evaluate_index --index_name LitSearch.title_abstract.bm25
+NLTK data found, skipping download
+Loading index from retrieval_indices\LitSearch.title_abstract.bm25...
+'(MaxRetryError("HTTPSConnectionPool(host='hf-mirror.com', port=443): Max retries exceeded with url: /datasets/princeton-nlp/LitSearch/resolve/main/README.md (Caused by ProxyError('Unable to connect to
+proxy', FileNotFoundError(2, 'No such file or directory')))"), '(Request ID: bd582f1f-dfee-403b-a14e-356bbd4efb80)')' thrown while requesting HEAD https://hf-mirror.com/datasets/princeton-nlp/LitSearch/resolve/main/README.md
+Retrying in 1s [Retry 1/5].
+'(MaxRetryError("HTTPSConnectionPool(host='hf-mirror.com', port=443): Max retries exceeded with url: /datasets/princeton-nlp/LitSearch/resolve/main/README.md (Caused by ProxyError('Unable to connect to
+proxy', FileNotFoundError(2, 'No such file or directory')))"), '(Request ID: e9e169fa-96ec-46f4-b20f-966b192d9829)')' thrown while requesting HEAD https://hf-mirror.com/datasets/princeton-nlp/LitSearch/resolve/main/README.md
+Retrying in 2s [Retry 2/5].
+'(MaxRetryError("HTTPSConnectionPool(host='hf-mirror.com', port=443): Max retries exceeded with url: /datasets/princeton-nlp/LitSearch/resolve/main/README.md (Caused by ProxyError('Unable to connect to
+proxy', FileNotFoundError(2, 'No such file or directory')))"), '(Request ID: 9a538895-67e6-444f-ba1b-e7fb0d2024f3)')' thrown while requesting HEAD https://hf-mirror.com/datasets/princeton-nlp/LitSearch/resolve/main/README.md
+Retrying in 4s [Retry 3/5].
+'(MaxRetryError("HTTPSConnectionPool(host='hf-mirror.com', port=443): Max retries exceeded with url: /datasets/princeton-nlp/LitSearch/resolve/main/README.md (Caused by ProxyError('Unable to connect to
+proxy', FileNotFoundError(2, 'No such file or directory')))"), '(Request ID: 4a1f1ebe-8926-4b1f-a487-1428683ba96f)')' thrown while requesting HEAD https://hf-mirror.com/datasets/princeton-nlp/LitSearch/resolve/main/README.md
+Retrying in 8s [Retry 4/5].
+'(MaxRetryError("HTTPSConnectionPool(host='hf-mirror.com', port=443): Max retries exceeded with url: /datasets/princeton-nlp/LitSearch/resolve/main/README.md (Caused by ProxyError('Unable to connect to
+proxy', FileNotFoundError(2, 'No such file or directory')))"), '(Request ID: a77183ae-d48b-4a14-be13-695ad2e91954)')' thrown while requesting HEAD https://hf-mirror.com/datasets/princeton-nlp/LitSearch/resolve/main/README.md
+Retrying in 8s [Retry 5/5].
+'(MaxRetryError("HTTPSConnectionPool(host='hf-mirror.com', port=443): Max retries exceeded with url: /datasets/princeton-nlp/LitSearch/resolve/main/README.md (Caused by ProxyError('Unable to connect to
+proxy', FileNotFoundError(2, 'No such file or directory')))"), '(Request ID: fe8d3885-113b-449b-be1a-e81f5f6308d6)')' thrown while requesting HEAD https://hf-mirror.com/datasets/princeton-nlp/LitSearch/resolve/main/README.md
+Using the latest cached version of the dataset since princeton-nlp/LitSearch couldn't be found on the Hugging Face Hub
+Found the latest cached dataset configuration 'query' at C:\Users\15130.cache\huggingface\datasets\princeton-nlp___lit_search\query\0.0.0\9573fb284a1026c998df47024b888a163f0f0e25 (last modified on Tue Mar  3 21:37:34 2026).
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 597/597 [02:43<00:00,  3.66it/s]
+Saved 597 records to results/retrieval\LitSearch.title_abstract.bm25.jsonl
+(venv) PS D:\AAAfinal\LitSearch-main> Get-Content results\retrieval\LitSearch.title_abstract.bm25.jsonl -TotalCount 3
+{"query_set": "inline_acl", "query": "Are there any research papers on methods to compress large-scale language models using task-agnostic knowledge distillation techniques?", "specificity": 0, "qualit
+y": 2, "corpusids": [202719327], "retrieved": [248227350, 221995575, 257038997, 235294276, 258212842, 3643430, 256461337, 201670719, 219176798, 247741658, 259137871, 247596810, 250390982, 258865530, 23
+4482764, 239016109, 259370686, 258960671, 237563200, 222290473, 253107373, 233189631, 235390766, 237433629, 258461336, 218502458, 3323727, 235258277, 221702970, 257219883, 239009526, 227231182, 2474759
+77, 235436167, 229923069, 215416219, 252819437, 241583522, 229923739, 222132977, 259370700, 227247952, 252873105, 204838340, 221761597, 256598338, 256461166, 248780060, 239015981, 237605176, 251439133,
+243865637, 257901132, 235794868, 256460933, 207847275, 226226888, 248780145, 233209878, 254823436, 258564695, 2331610, 259370551, 247582435, 254685796, 204867723, 250390701, 222177226, 257913267, 2454
+25026, 233307448, 227746078, 248780277, 232417205, 3013625, 235652233, 10229459, 258765271, 15363009, 248227273, 59294230, 252819156, 247451141, 258079331, 5635092, 256827874, 215238664, 243865564, 132
+9417, 215238853, 199453123, 258967501, 211204667, 235212428, 207852450, 259370760, 237381852, 235720578, 256390109, 256900817, 247922354, 250390702, 248779934, 18712337, 216056470, 229365643, 256461264
+, 233365317, 14166989, 222291506, 102352497, 233364977, 237250417, 221739325, 14315601, 222177203, 189898, 258436868, 189928081, 3402524, 240070849, 250390973, 14000918, 248779987, 233481638, 9969417,
+208527260, 221818778, 243865159, 231740666, 15519576, 227230646, 21902, 246430598, 252368235, 245219186, 1713770, 8241258, 258833648, 253735201, 250390577, 248780115, 219304844, 247763074, 253098754, 2
+59088854, 8563381, 13458891, 238857304, 252693220, 15184817, 248779869, 222140746, 222310543, 250391099, 231719135, 234771710, 11023355, 85464175, 231627467, 256827099, 22103840, 7398330, 58006584, 252
+846121, 225076095, 220280364, 13368442, 1260503, 258762468, 256461307, 219414822, 8928513, 253734483, 220045412, 254854264, 246823969, 263909387, 258461058, 22421874, 5662158, 227231666, 225070304, 3611540, 253080510, 258765289, 226226438, 225075677, 234487239, 202789367, 212415013, 53082357, 1923568, 202785312, 51880779, 16357199, 11829630, 247593909, 240288605, 1846037]}
+{"query_set": "inline_acl", "query": "Are there any resources available for translating Tunisian Arabic dialect that contain both manually translated comments by native speakers and additional data aug
+mented through methods like segmentation at stop words level?", "specificity": 1, "quality": 2, "corpusids": [227231792], "retrieved": [227231792, 233365022, 6825507, 252432736, 15225095, 199379793, 16
+825250, 16563009, 259376822, 250150501, 12160022, 9517956, 546842, 8288624, 9726397, 8488020, 10780276, 238583454, 214612326, 16303315, 1999849, 8964961, 256739275, 8491557, 5797224, 12678205, 25262451
+8, 1644594, 245616856, 29263038, 38555749, 1378015, 14722064, 256461096, 227126402, 3190127, 23832010, 15389538, 8857535, 249461536, 29324448, 252377772, 233324253, 5980214, 52012926, 9792162, 3513881,
+916523, 6975411, 16553775, 254293626, 907869, 32734599, 14438207, 18987788, 216144648, 249980208, 21695693, 9653643, 7303263, 8333055, 258967484, 257258183, 7090980, 250164004, 263875901, 3588955, 109
+61392, 444392, 227231049, 259833888, 7375882, 14440663, 2569925, 252460071, 7546993, 14189632, 1758960, 9905604, 11851475, 250426644, 252873073, 37366821, 909680, 8151919, 16209698, 758986, 12745083, 1
+8004973, 1529015, 10934368, 253080828, 238744500, 51880056, 1612194, 18196992, 14582094, 16213870, 34845892, 549380, 227905679, 253761435, 12548008, 13991645, 45539635, 227231191, 89899, 208309968, 217
+14084, 3656086, 883489, 2611120, 252624435, 17387910, 199379341, 39720952, 51856759, 30907836, 14569368, 7859600, 53480508, 15617966, 955657, 222002239, 53590978, 14366257, 11825746, 246285403, 7790831
+, 61877172, 248887445, 14945960, 214743214, 6883407, 12907125, 220045406, 468680, 21706033, 238215458, 199379584, 252624613, 252819430, 17265452, 3015371, 249204428, 248780518, 258765255, 29437576, 318
+0697, 1066490, 12031968, 202619400, 12207938, 14128603, 248512850, 21680159, 6602126, 252624769, 8563125, 8314368, 1787135, 11943443, 233365341, 11696905, 16347671, 229365644, 2664741, 247475839, 11057
+896, 227231779, 11745386, 247693994, 8208398, 12478551, 2562642, 18341153, 15618774, 251403449, 235248117, 59336566, 17540112, 259370852, 8361319, 698317, 9828572, 219558379, 227231083, 21717882, 53611580, 248780066, 2022814, 21731848, 219304175, 17257526, 2516961, 2913101, 233365350, 237440458, 8063811, 174800126]}
+{"query_set": "inline_acl", "query": "Are there any studies that explore post-hoc techniques for hallucination detection at both the token- and sentence-level in neural sequence generation tasks?", "sp
+ecificity": 0, "quality": 2, "corpusids": [226254579, 204976362], "retrieved": [226254579, 256000114, 254823170, 251468136, 259370783, 233231232, 233296487, 237329050, 248227301, 247741137, 22336489, 2
+33231373, 252992926, 233296648, 247476327, 254853721, 259376466, 248779957, 21306064, 222290728, 216056470, 236460192, 247476018, 234342930, 244909449, 252907639, 259376694, 218517088, 51882360, 521765
+06, 247187928, 247657229, 233204406, 250179900, 235436269, 218487034, 248377045, 208331645, 247446894, 20969045, 233296059, 261214454, 1572802, 233289407, 199551982, 202565479, 236486292, 221265974, 16
+566986, 254877112, 254853913, 12937092, 1937760, 208332259, 251741425, 258832835, 236477936, 237941123, 235097382, 237593074, 388111, 236459829, 52056513, 218538004, 222377874, 253761434, 237366368, 99
+32933, 243865150, 253097869, 258887528, 7066450, 248506182, 243865354, 239016608, 196183567, 221266228, 14633379, 218470367, 252819392, 198996284, 256461379, 256460997, 53604363, 236460105, 262050697,
+250390700, 252819406, 222141002, 237572264, 258486857, 52011451, 237347003, 22457893, 233189560, 13569472, 259370802, 236145023, 253265213, 8680683, 254563972, 21717477, 5315990, 226262256, 225041226,
+253264962, 53246556, 234469688, 244346011, 249119312, 218502513, 52009139, 252383259, 248779944, 218487159, 13564772, 259833833, 7079385, 258486918, 236459793, 207852642, 119302203, 260887250, 25937653
+3, 222140894, 254823387, 250164113, 250390938, 243865671, 17818091, 220050117, 227231546, 231951460, 233296336, 218610544, 244909180, 53081291, 166228140, 258378147, 33191382, 36549760, 253116838, 2048
+23809, 236477371, 236460028, 209423118, 235125766, 202537477, 258079331, 17566738, 10032144, 17103462, 259298593, 17175134, 252624582, 252082935, 220046446, 256461248, 11101999, 14775851, 259833796, 23
+2222214, 252365036, 259376691, 259833802, 237440458, 15456486, 256460985, 67856013, 252411574, 252819140, 237572395, 232404824, 13232194, 202598857, 258546884, 182952400, 195750836, 8393918, 174800952,
+218470025, 11535174, 17984798, 247762387, 252873370, 229365836, 243865645, 11727348, 258378194, 7314969, 259376853, 207926688, 21707078, 9564958, 258486964, 253237023, 250390534, 224814113, 52074232, 245857123]}
+(venv) PS D:\AAAfinal\LitSearch-main> Get-Content eval\retrieval\evaluate_index.py
+import os
+import argparse
+import datasets
+from tqdm import tqdm
+from utils import utils
+from eval.retrieval.kv_store import KVStore
+def load_index(index_path: str) -> KVStore:
+index_type = os.path.basename(index_path).split(".")[-1]
+if index_type == "bm25":
+from eval.retrieval.bm25 import BM25
+index = BM25(None).load(index_path)
+elif index_type == "instructor":
+from eval.retrieval.instructor import Instructor
+index = Instructor(None, None, None).load(index_path)
+elif index_type == "e5":
+from eval.retrieval.e5 import E5
+index = E5(None).load(index_path)
+elif index_type == "gtr":
+from eval.retrieval.gtr import GTR
+index = GTR(None).load(index_path)
+elif index_type == "grit":
+from eval.retrieval.grit import GRIT
+index = GRIT(None, None).load(index_path)
+else:
+raise ValueError("Invalid index type")
+return index
+parser = argparse.ArgumentParser()
+parser.add_argument("--index_name", type=str, required=True)
+parser.add_argument("--top_k", type=int, required=False, default=200)
+parser.add_argument("--retrieval_results_root_dir", type=str, required=False, default="results/retrieval")
+parser.add_argument("--index_root_dir", type=str, required=False, default="retrieval_indices")
+parser.add_argument("--dataset_path", required=False, default="princeton-nlp/LitSearch")
+args = parser.parse_args()
+index = load_index(os.path.join(args.index_root_dir, args.index_name))
+query_set = [query for query in datasets.load_dataset(args.dataset_path, "query", split="full")]
+for query in tqdm(query_set):
+query_text = query["query"]
+top_k = index.query(query_text, args.top_k)
+query["retrieved"] = top_k
+os.makedirs(args.retrieval_results_root_dir, exist_ok=True)
+output_path = os.path.join(args.retrieval_results_root_dir, f"{args.index_name}.jsonl")
+utils.write_json(query_set, output_path)
+(venv) PS D:\AAAfinal\LitSearch-main> ^C
+(venv) PS D:\AAAfinal\LitSearch-main> dir eval
+Directory: D:\AAAfinal\LitSearch-main\eval
+Mode                 LastWriteTime         Length Name
+d-----         2026/3/15      9:35                onehop
+d-----         2026/3/15      9:35                reranking
+d-----         2026/3/15     11:03                retrieval
+(venv) PS D:\AAAfinal\LitSearch-main> python compute_metrics.py
+BM25 metrics on LitSearch
+Recall@10 : 0.5149
+Recall@50 : 0.6668
+Recall@100: 0.7362
+Hit@10    : 0.5260
+Hit@100   : 0.7487
+MRR@10    : 0.3522
+MRR@100   : 0.3610
+(venv) PS D:\AAAfinal\LitSearch-main> Get-Content eval\retrieval\e5.py
+import sentence_transformers
+import numpy as np
+from typing import List, Any
+from sklearn.metrics.pairwise import cosine_similarity
+from eval.retrieval.kv_store import KVStore
+from eval.retrieval.kv_store import TextType
+from utils import utils
+class E5(KVStore):
+def init(self, index_name: str, model_path: str = "intfloat/e5-large-v2"):
+super().init(index_name, 'e5')
+self.model_path = model_path
+self._model = sentence_transformers.SentenceTransformer(model_path, device="cuda", cache_folder=utils.get_cache_dir()).bfloat16()
+def _format_text(self, text: str, type: TextType) -> str:
+if type == TextType.KEY:
+text = "passage: " + text
+elif type == TextType.QUERY:
+text = "query: " + text
+else:
+raise ValueError("Invalid TextType")
+return text
+def _encode_batch(self, texts: List[str], type: TextType, show_progress_bar: bool = True) -> List[Any]:
+texts = [self._format_text(text, type) for text in texts]
+return self._model.encode(texts, batch_size=256, normalize_embeddings=True, show_progress_bar=show_progress_bar).astype(np.float16)
+def _query(self, encoded_query: Any, n: int) -> List[int]:
+cosine_similarities = cosine_similarity([encoded_query], self.encoded_keys)[0]
+top_indices = cosine_similarities.argsort()[-n:][::-1]
+return top_indices
+def load(self, path: str):
+super().load(path)
+self._model = sentence_transformers.SentenceTransformer(self.model_path, device="cuda", cache_folder=utils.get_cache_dir())
+return self
+(venv) PS D:\AAAfinal\LitSearch-main>
+你可以按“这周做了什么 → 遇到什么问题 → 怎么解决的 → 下周做什么”这个顺序说。老师一般最关心的是：你有没有真正推进、现在卡在哪、下周计划是否具体。
+我给你一版你可以直接说的口头汇报稿，偏自然一点。
+老师好，我这周主要在做论文复现的前期准备和 baseline 实验。
+目前已经完成了 LitSearch 项目的本地环境搭建，包括 Python 虚拟环境创建、相关依赖安装，以及数据集下载。然后我对项目代码结构做了初步梳理，明确了 retrieval、reranking 等模块的作用。
+在实验方面，我已经成功完成了 BM25 检索基线 的复现。具体包括两个部分：
+第一是基于 title_abstract 字段构建了 BM25 索引；
+第二是运行检索评测脚本，生成了 597 条 query 的检索结果文件，并进一步自己编写了指标计算脚本，算出了 BM25 的 Recall、Hit 和 MRR 等指标。
+目前得到的 BM25 baseline 结果是：
+Recall@10 为 0.5149，Recall@50 为 0.6668，Recall@100 为 0.7362；
+MRR@10 为 0.3522，MRR@100 为 0.3610。
+说明当前 baseline 已经跑通，后面可以作为对照组来继续做 dense retrieval 和 reranking 的实验。
+这周过程中也遇到了一些问题，主要是环境和依赖方面，比如 nltk 资源下载、openai 包缺失、网络连接不稳定，还有评测脚本本身并不直接输出指标，需要我额外分析结果文件并计算指标。现在这些问题基本都已经解决了。
+下周我准备继续推进两个方面。
+第一，尝试复现一个 dense retrieval 模型，优先考虑 E5，完成索引构建、结果生成以及和 BM25 的指标对比；
+第二，进一步阅读论文和项目代码，把 retrieval 和 reranking 的整体实验流程梳理清楚，为后续写实验部分和系统实现部分做准备。
+如果后续 dense 模型在本地设备上运行有资源限制，我也会同步评估是否对代码做 CPU 适配，或者优先选择一个可行模型先完成对比实验。
+如果你想更正式一点，你也可以压缩成这种“简洁版”：
+这周我主要完成了论文复现的前期准备工作和 BM25 基线实验。已经搭建好本地运行环境，下载并整理了 LitSearch 数据集，梳理了项目代码结构。实验上，已成功构建 BM25 索引，并完成 597 条查询的检索结果生成和指标计算，得到了 Recall、Hit、MRR 等 baseline 结果。过程中解决了依赖安装、NLTK 数据下载和评测脚本不直接输出指标等问题。下周计划继续复现 dense retrieval 模型，优先尝试 E5，并将实验结果与 BM25 基线进行对比，同时进一步梳理 retrieval 和 reranking 的整体流程。
+你跟老师汇报时，尽量突出这三点：
+第一，你不是只在“装环境”，而是已经跑出了 baseline 结果。
+第二，你不是瞎试，而是已经搞清楚代码流程。
+第三，你下周计划不是空话，而是很具体：复现 E5，对比 BM25。
+BM25 的分组统计和样例分析
+实验在 Windows 本地环境下完成 BM25 基线复现，使用 Python 虚拟环境管理依赖，基于 LitSearch 官方代码构建索引并生成检索结果，随后编写脚本对结果文件进行指标统计。基于上述分析，本文下一步将复现稠密检索模型，并与 BM25 基线进行对比，以进一步验证语义检索方法在科学文献检索任务中的优势。
+4.X BM25 基线实验结果与分析
+4.X.1 实验说明
+本文首先在 LitSearch 数据集上复现 BM25 稀疏检索基线方法。实验基于 title_abstract 字段构建检索索引，并对全部 597 条查询进行评测。为衡量检索系统的性能，本文采用 Recall@k、Hit@k 和 MRR@k 作为主要评价指标。实验结果表明，BM25 作为传统关键词匹配方法，能够召回一定比例的相关文献，但在复杂科研文献检索场景下，其排序质量与召回能力仍存在明显局限。
+表 4-X BM25 在 LitSearch 数据集上的总体结果
+指标
+数值
+Recall@10
+0.5149
+Recall@50
+0.6668
+Recall@100
+0.7362
+Hit@10
+0.5260
+Hit@100
+0.7487
+MRR@10
+0.3522
+MRR@100
+0.3610
+从总体结果可以看出，BM25 在 Recall@100 上达到 0.7362，说明随着候选文献数量增加，系统能够找回较大比例的相关文献；但其 MRR@10 仅为 0.3522，表明虽然相关文献能够被部分召回，但往往不能稳定地排在前几位。换言之，BM25 更擅长“找回来”，但在“排得准”方面仍存在不足。
+4.X.2 不同查询类型下的分组结果分析
+为进一步分析 BM25 在不同类型查询上的表现，本文根据 LitSearch 数据集中的 query_set 字段对查询进行分组统计，具体包括 inline_acl、inline_nonacl、manual_acl 和 manual_iclr 四类。分组评测结果如表 4-X 所示。
+表 4-X BM25 在不同 query_set 上的分组结果
+Query Set
+Count
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+inline_acl
+98
+0.4531
+0.5878
+0.6633
+0.4898
+0.7041
+0.2829
+0.2927
+inline_nonacl
+253
+0.4111
+0.5553
+0.6621
+0.4229
+0.6759
+0.2648
+0.2737
+manual_acl
+155
+0.5935
+0.7613
+0.8000
+0.5935
+0.8000
+0.4352
+0.4440
+manual_iclr
+91
+0.7363
+0.9011
+0.9121
+0.7363
+0.9121
+0.5283
+0.5355
+从分组结果可以看出，BM25 在人工编写查询上的表现明显优于从论文行内引用语境改写得到的查询。其中，manual_iclr 组效果最佳，其 Recall@10 达到 0.7363，MRR@10 达到 0.5283；manual_acl 组次之，Recall@10 为 0.5935，MRR@10 为 0.4352。相比之下，inline_acl 与 inline_nonacl 两组表现明显较低，尤其是 inline_nonacl，其 Recall@10 仅为 0.4111，MRR@10 仅为 0.2648。
+这一现象说明，BM25 对显式关键词重合较为敏感。当查询由研究者人工编写时，通常主题更集中、术语表达更直接，因此更容易与文献标题或摘要中的高频关键词形成匹配；而由论文上下文改写得到的 inline 类查询往往描述更长、语义约束更多、表达方式更接近自然语言需求，这会削弱纯词项匹配方法的效果，从而导致召回率和排序质量下降。
+4.X.3 成功与失败案例分析
+为进一步分析 BM25 的优势与不足，本文对部分成功样例与失败样例进行了观察。结果显示，BM25 在查询中包含较明确的领域术语或稳定关键词时，通常能够取得较好的效果。例如，涉及 “hallucination detection”“clickbait headlines”“patronizing and condescending language” 等明确研究主题的查询，其相关论文往往能够排在首位，说明当查询与目标文献在词面层面具有较高重合度时，BM25 具有较强的命中能力。
+相对地，在失败样例中，查询通常包含更长的自然语言描述、多重限制条件或更复杂的研究意图。例如，有些查询同时限定具体方法、模型、任务层级和评价维度，虽然语义表达准确，但未必能够与目标文献的标题和摘要形成足够强的关键词重合，因此 BM25 难以在前列位置返回正确结果。还有一些查询更依赖语义理解而非字面匹配，例如需要识别“方法目的”“研究设定”或“隐含任务背景”的场景，这也是传统词项匹配方法的薄弱环节。
+综合来看，BM25 作为稀疏检索基线方法，在科研文献检索任务中仍具有一定有效性，特别是在查询关键词明确、术语集中时可以取得较好效果；但面对复杂描述型查询和需要深层语义匹配的场景时，其性能存在明显局限。这也说明，在后续实验中引入 dense retrieval 方法具有必要性。
+终端输出
+E5
+Recall@10 = 0.5827
+Recall@50 = 0.7386
+Recall@100 = 0.7748
+Hit@10 = 0.5963
+Hit@100 = 0.7889
+MRR@10 = 0.4116
+MRR@100 = 0.4199
+E5 稠密检索优于 BM25 稀疏检索。
+具体表现为：
+E5 的召回能力更强，Recall@10、Recall@50、Recall@100 都更高
+E5 的排序质量更好，MRR@10 和 MRR@100 明显高于 BM25
+E5 在前 10 个结果中命中至少一个正确答案的概率也更高，Hit@10 从 0.5260 提升到 0.5963
+为进一步验证稠密检索方法在科学文献检索任务中的有效性，本文在 LitSearch 数据集上复现了 E5 检索模型，并与 BM25 基线进行了对比。实验结果表明，E5 在各项指标上均优于 BM25。其中，E5 的 Recall@10、Recall@50、Recall@100 分别达到 0.5827、0.7386 和 0.7748，均高于 BM25 的 0.5149、0.6668 和 0.7362；同时，E5 的 MRR@10 和 MRR@100 分别为 0.4116 和 0.4199，也显著优于 BM25 的 0.3522 和 0.3610。结果说明，相比依赖词项匹配的传统检索方法，基于语义表示的稠密检索模型在复杂自然语言查询场景下能够更有效地召回相关文献，并将正确结果排在更靠前的位置。
+可以，下面是一版可直接放进论文正文的 “BM25 与 E5 对比实验”正式小节。你后面只需要按学校格式调整编号和表格样式。
+4.X BM25 与 E5 对比实验
+4.X.1 实验设置
+为验证稀疏检索方法与稠密检索方法在科学文献检索任务中的性能差异，本文在 LitSearch 数据集上分别复现了 BM25 与 E5 两种检索方法，并基于相同的 title_abstract 字段构建索引进行对比实验。实验评价指标采用 Recall@k、Hit@k 和 MRR@k。其中，Recall@k 用于衡量前 (k) 个检索结果中召回相关文献的能力，Hit@k 用于衡量前 (k) 个结果中是否至少命中一个正确答案，MRR@k 则用于衡量第一个正确结果在返回列表中的排序位置。
+BM25 基线实验结果显示，其 Recall@10、Recall@50、Recall@100 分别为 0.5149、0.6668、0.7362，Hit@10 和 Hit@100 分别为 0.5260 和 0.7487，MRR@10 和 MRR@100 分别为 0.3522 和 0.3610。
+4.X.2 实验结果
+表 4-X 给出了 BM25 与 E5 在 LitSearch 数据集上的对比结果。
+表 4-X BM25 与 E5 在 LitSearch 上的检索性能对比
+Method
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+BM25
+0.5149
+0.6668
+0.7362
+0.5260
+0.7487
+0.3522
+0.3610
+E5
+0.5827
+0.7386
+0.7748
+0.5963
+0.7889
+0.4116
+0.4199
+从表中可以看出，E5 在所有评价指标上均优于 BM25。与 BM25 相比，E5 的 Recall@10 提升了 0.0678，Recall@50 提升了 0.0718，Recall@100 提升了 0.0386；同时，Hit@10 从 0.5260 提升到 0.5963，Hit@100 从 0.7487 提升到 0.7889；在排序质量方面，E5 的 MRR@10 和 MRR@100 也分别提升至 0.4116 和 0.4199，明显优于 BM25 的 0.3522 和 0.3610。BM25 基线数值来自前述本地复现实验。
+4.X.3 结果分析
+实验结果表明，在 LitSearch 这类科学文献检索任务中，基于语义向量表示的稠密检索方法相较于基于词项匹配的传统方法具有更好的性能表现。BM25 的核心优势在于实现简单、检索效率较高，并且当查询中包含明确术语或与目标文献标题、摘要有较强词面重合时，能够取得较好的效果；但其局限也较为明显，即对复杂自然语言描述、长查询以及隐含语义关系的建模能力较弱，因此在需要语义匹配的场景中容易出现漏检或排序靠后的情况。BM25 的总体结果已经体现出这一点：虽然 Recall@100 达到 0.7362，说明其在扩大候选集时仍能找回较多相关文献，但 MRR@10 仅为 0.3522，说明正确答案往往未能稳定排在前列。
+相比之下，E5 通过将查询与文献统一映射到稠密向量空间中进行相似度计算，能够更好地捕捉查询语义与文献内容之间的深层关联，因此在召回能力和排序质量上均表现更优。尤其是在 Recall@10、Hit@10 与 MRR@10 上的明显提升，表明 E5 不仅能够找回更多相关文献，还更容易将正确结果排到前几位。这说明在科研文献检索场景下，语义表示能力对于提升检索系统性能具有重要作用。
+进一步来看，E5 在 Recall@100 上相较 BM25 的提升幅度小于 Recall@10 和 MRR@10 的提升幅度，这表明 BM25 在较大的候选范围内仍具有一定召回能力，但 E5 的优势主要体现在“前排结果质量”上。这一点对于实际系统应用尤为重要，因为用户通常更关注前若干条检索结果的相关性与可用性。因此，从用户体验和系统实用性角度看，E5 相比 BM25 更适合作为后续学术检索增强系统中的主检索模块。
+4.X.4 小结
+综上所述，本文在 LitSearch 数据集上完成了 BM25 与 E5 两种检索方法的复现与对比。实验结果表明，E5 在 Recall、Hit 和 MRR 等指标上均优于 BM25，验证了稠密检索方法在复杂科研文献检索任务中的有效性。这一结果为后续进一步引入更强的稠密检索模型、重排序方法以及检索增强生成模块提供了实验依据。
+如果你要，我还可以继续帮你整理成下一节的 “实验结果讨论”，或者直接给你补一版 适合答辩 PPT 的对比页文案。
+BM25 vs E5 分组对比
+Query Set
+指标
+BM25
+E5
+变化
+inline_acl
+Recall@10
+0.4531
+0.5398
++0.0867
+Recall@50
+0.5878
+0.6476
++0.0598
+Recall@100
+0.6633
+0.6740
++0.0107
+Hit@10
+0.4898
+0.5918
++0.1020
+MRR@10
+0.2829
+0.3876
++0.1047
+inline_nonacl
+Recall@10
+0.4111
+0.5415
++0.1304
+Recall@50
+0.5553
+0.7055
++0.1502
+Recall@100
+0.6621
+0.7609
++0.0988
+Hit@10
+0.4229
+0.5534
++0.1305
+MRR@10
+0.2648
+0.3546
++0.0898
+manual_acl
+Recall@10
+0.5935
+0.6194
++0.0259
+Recall@50
+0.7613
+0.7548
+-0.0065
+Recall@100
+0.8000
+0.7871
+-0.0129
+Hit@10
+0.5935
+0.6194
++0.0259
+MRR@10
+0.4352
+0.4627
++0.0275
+manual_iclr
+Recall@10
+0.7363
+0.6813
+-0.0550
+Recall@50
+0.9011
+0.9011
+0
+Recall@100
+0.9121
+0.9011
+-0.0110
+Hit@10
+0.7363
+0.6813
+-0.0550
+MRR@10
+0.5283
+0.5085
+-0.0198
+可以，下面给你整理成一版 “BM25 与 E5 分组对比实验”正式论文小节，你可以直接放进正文，再按学校格式调整编号和表格样式。
+4.X BM25 与 E5 分组对比实验
+4.X.1 实验目的
+为进一步分析不同检索方法在不同类型查询上的适用性，本文在 LitSearch 数据集上分别统计了 BM25 与 E5 在不同 query_set 上的检索表现。数据集中的查询分为四类：inline_acl、inline_nonacl、manual_acl 和 manual_iclr。其中，inline_* 类查询主要由论文正文中的引用语境改写而来，通常语义较复杂、自然语言特征更强；manual_* 类查询则由人工编写，通常主题更明确、关键词更集中。通过分组对比，可以进一步观察稀疏检索与稠密检索在不同查询场景下的优势与局限。
+4.X.2 分组实验结果
+表 4-X 给出了 BM25 与 E5 在四类查询上的分组结果。
+表 4-X BM25 与 E5 在不同 query_set 上的分组结果对比
+Query Set
+Method
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+inline_acl
+BM25
+0.4531
+0.5878
+0.6633
+0.4898
+0.7041
+0.2829
+0.2927
+inline_acl
+E5
+0.5398
+0.6476
+0.6740
+0.5918
+0.7245
+0.3876
+0.3923
+inline_nonacl
+BM25
+0.4111
+0.5553
+0.6621
+0.4229
+0.6759
+0.2648
+0.2737
+inline_nonacl
+E5
+0.5415
+0.7055
+0.7609
+0.5534
+0.7747
+0.3546
+0.3636
+manual_acl
+BM25
+0.5935
+0.7613
+0.8000
+0.5935
+0.8000
+0.4352
+0.4440
+manual_acl
+E5
+0.6194
+0.7548
+0.7871
+0.6194
+0.7871
+0.4627
+0.4706
+manual_iclr
+BM25
+0.7363
+0.9011
+0.9121
+0.7363
+0.9121
+0.5283
+0.5355
+manual_iclr
+E5
+0.6813
+0.9011
+0.9011
+0.6813
+0.9011
+0.5085
+0.5196
+4.X.3 结果分析
+从表 4-X 可以看出，E5 对不同类型查询的提升并不均匀，其优势主要体现在 inline_acl 和 inline_nonacl 两类查询上。相较于 BM25，E5 在 inline_acl 上的 Recall@10 从 0.4531 提升至 0.5398，Hit@10 从 0.4898 提升至 0.5918，MRR@10 从 0.2829 提升至 0.3876，说明 E5 不仅能够召回更多相关文献，还能更有效地将正确结果排在前列。
+在 inline_nonacl 上，E5 的提升更为明显。其 Recall@10 从 0.4111 提升到 0.5415，Recall@50 从 0.5553 提升到 0.7055，Recall@100 从 0.6621 提升到 0.7609，MRR@10 也从 0.2648 提升到 0.3546。该结果表明，对于这类由论文上下文改写而来的复杂自然语言查询，稠密检索模型能够更好地捕捉查询与文献之间的语义关系，因此在召回能力和排序质量上均显著优于 BM25。
+相比之下，在 manual_acl 上，E5 相对于 BM25 的优势较为有限。E5 在 Recall@10 与 MRR@10 上仍有小幅提升，但在 Recall@50、Recall@100 以及 Hit@100 上略低于 BM25。这说明对于人工编写且关键词较明确的查询，BM25 依赖词面匹配的机制仍然具有较强竞争力，而语义检索的提升空间相对较小。
+在 manual_iclr 上，BM25 甚至略优于 E5。具体来看，BM25 的 Recall@10 为 0.7363，而 E5 为 0.6813；BM25 的 MRR@10 为 0.5283，也高于 E5 的 0.5085。造成这一现象的一个合理解释是，manual_iclr 类查询通常主题明确、术语集中，与目标文献的标题和摘要在词项层面存在较高重合度，因此 BM25 已能取得较好的表现，而 E5 的语义表示优势在这类查询上没有得到充分体现。
+综合来看，E5 的主要优势在于改善 BM25 在复杂语义查询上的不足，尤其是对 inline_* 类查询的检索性能提升较为显著；而对于术语明确、词面重合度较高的人工查询，BM25 仍然保持较强的基线能力。这一结果说明，在科学文献检索任务中，稠密检索并非在所有场景下都绝对优于稀疏检索，但其在处理复杂自然语言查询时具有更强的适应性和更高的实际应用价值。
+4.X.4 小结
+通过对不同 query_set 的分组对比实验可以看出，E5 相较于 BM25 的优势主要体现在语义更复杂、表达更自然的 inline_acl 和 inline_nonacl 查询上，而在 manual_acl 和 manual_iclr 这类关键词更集中、词面匹配更强的查询上，BM25 仍然具有较强竞争力。该结果表明，科学文献检索任务具有明显的查询类型差异，后续系统设计中可考虑结合稀疏检索与稠密检索的优势，以进一步提升整体检索性能。
+E5 + rerank(top20)
+你原始 E5 全量结果是：
+Recall@10 = 0.5827
+Recall@50 = 0.7386
+Recall@100 = 0.7748
+Hit@10 = 0.5963
+Hit@100 = 0.7889
+MRR@10 = 0.4116
+MRR@100 = 0.4199
+你现在 rerank 后是：
+Recall@10 = 0.6053
+Recall@50 = 0.7386
+Recall@100 = 0.7748
+Hit@10 = 0.6198
+Hit@100 = 0.7889
+MRR@10 = 0.4637
+MRR@100 = 0.4706
+结论很明确：
+本地 CrossEncoder 对 E5 的前 20 个候选进行重排后，显著提升了前排排序质量。
+具体看：
+Recall@10：0.5827 → 0.6053，提升 +0.0226
+Hit@10：0.5963 → 0.6198，提升 +0.0235
+MRR@10：0.4116 → 0.4637，提升 +0.0521
+MRR@100：0.4199 → 0.4706，提升 +0.0507
+而：
+Recall@50 不变
+Recall@100 不变
+Hit@100 不变
+这也完全符合预期，因为你现在做的是：
+只重排前 20 条，20 之后保持原顺序不变。
+所以 reranker 的作用主要体现在：
+把原本已经召回到前 20 的相关文献，进一步推到更靠前的位置。
+这正是 reranking 应该干的事。
+这个结果怎么写进论文
+你可以直接写成这种表述：
+在 E5 初始召回结果的基础上，本文进一步采用本地 CrossEncoder reranker 对前 20 个候选文献进行精排。实验结果表明，reranking 对前排检索效果具有明显提升作用。与原始 E5 相比，Recall@10 从 0.5827 提升至 0.6053，Hit@10 从 0.5963 提升至 0.6198，MRR@10 从 0.4116 提升至 0.4637，MRR@100 也从 0.4199 提升至 0.4706。与此同时，Recall@50、Recall@100 和 Hit@100 基本保持不变。这表明 reranker 并未改变系统的整体召回范围，而是主要通过调整前 20 个候选文献的排序，使相关文献更靠近结果列表前端，从而提升了用户更关注的前排检索质量。
+如果你想写得更学术一点，还可以再补一句：
+该结果说明，双塔检索模型 E5 具备较强的初始召回能力，而 CrossEncoder 更适合作为第二阶段排序模型，对候选集进行细粒度相关性判别。
+现在你已经完成了一个完整的实验链条
+你现在实际上已经有了：
+BM25 结果
+E5 结果
+E5 + rerank(top20) 结果
+这已经足够形成一条完整实验线：
+BM25 → E5 → E5 + rerank
+而且从结果上看，逻辑也很顺：
+E5 全面优于 BM25
+reranker 进一步提升 E5 的前排质量
+下面给你一版可直接放进论文的“实验结果与分析”正文初稿。你只需要把章节号、表号按你论文实际编号改一下就行。
+X.X 实验结果与分析
+为验证不同检索方法在 LitSearch 数据集上的效果，本文依次对 BM25、E5 稠密检索 以及 E5 + Reranking 三种方案进行了实验，并采用 Recall@10、Recall@50、Recall@100、Hit@10、Hit@100、MRR@10 和 MRR@100 作为评价指标。其中，Recall 用于衡量相关文献的召回能力，Hit 用于衡量前若干结果中是否至少命中一篇相关文献，MRR 则重点反映首篇相关文献在结果列表中的排名位置。因此，Recall 和 Hit 更能体现系统的覆盖能力，而 MRR 更能体现检索结果在前排位置上的排序质量。
+X.X.1 BM25 与 E5 的总体结果对比
+首先，对 BM25 和 E5 两种基础检索方法进行整体比较。实验结果表明，E5 在大多数指标上均优于 BM25，说明语义表示能力更强的稠密检索方法在 LitSearch 任务上具有明显优势。
+具体来看，BM25 的 Recall@10、Recall@50 和 Recall@100 分别为 0.5149、0.6668 和 0.7362，Hit@10 和 Hit@100 分别为 0.5260 和 0.7487，MRR@10 和 MRR@100 分别为 0.3522 和 0.3610。相比之下，E5 的 Recall@10、Recall@50 和 Recall@100 分别提升到 0.5827、0.7386 和 0.7748，Hit@10 和 Hit@100 提升到 0.5963 和 0.7889，MRR@10 和 MRR@100 则提升到 0.4116 和 0.4199。
+从提升幅度看，E5 相比 BM25 在 Recall@10 上提升了 0.0678，在 Hit@10 上提升了 0.0703，在 MRR@10 上提升了 0.0594。这说明 E5 不仅能够召回更多相关文献，而且能够将相关文献排到更靠前的位置。总体而言，E5 在 LitSearch 数据集上表现出了比 BM25 更强的检索能力，说明基于预训练语义表示的稠密检索方法能够更好地捕捉查询与文献之间的深层语义相关性。
+X.X.2 不同 query_set 下 BM25 与 E5 的分组结果分析
+为了进一步分析不同类型查询对检索效果的影响，本文按照数据集中的 query_set 对结果进行了分组统计，包括 inline_acl、inline_nonacl、manual_acl 和 manual_iclr 四类。
+从分组结果来看，E5 的优势并不是完全均匀分布的，而是主要体现在 inline_acl 和 inline_nonacl 两类查询上。对于 inline_acl，BM25 的 Recall@10 为 0.4531，MRR@10 为 0.2829，而 E5 分别提升到 0.5398 和 0.3876；对于 inline_nonacl，BM25 的 Recall@10 和 MRR@10 分别为 0.4111 和 0.2648，E5 则提升到 0.5415 和 0.3546。尤其是在 inline_nonacl 这一组中，E5 在 Recall@10、Recall@50、Recall@100 以及 MRR 指标上均有较明显提升，说明对于这类来源更复杂、表述更自由的查询，稠密检索能够更好地建模查询与文献之间的语义匹配关系。
+相比之下，在 manual_acl 这一组中，E5 相较 BM25 仍有一定提升，但优势没有前两组明显。具体而言，manual_acl 上 E5 的 Recall@10 从 0.5935 提升到 0.6194，MRR@10 从 0.4352 提升到 0.4627，但在 Recall@50、Recall@100 和 Hit@100 上反而略低于 BM25。这表明对于人工构造且表达较规范的查询，BM25 仍然能够利用关键词匹配获得较强的效果，而 E5 的语义优势在这一组中没有完全转化为更高的中后段召回。
+最值得注意的是 manual_iclr 这一组。在该组中，BM25 的 Recall@10、Hit@10 和 MRR@10 分别达到 0.7363、0.7363 和 0.5283，而 E5 对应指标分别为 0.6813、0.6813 和 0.5085，均略低于 BM25。这说明在部分人工构造且主题表达非常集中的查询场景下，关键词匹配方法仍然具有较强竞争力。换言之，manual_iclr 组的查询可能具有更明确的术语特征，使得 BM25 能够凭借词项重合度快速锁定相关文献，而 E5 的语义表示优势没有充分发挥出来。
+综合分组结果可以看出，E5 相比 BM25 的主要收益集中在更复杂、更依赖语义理解的查询上，特别是 inline_acl 和 inline_nonacl 两类。对于关键词高度集中、表述较规范的人工查询，BM25 仍然保留一定优势，尤其是在 manual_iclr 这一组中表现较为突出。这说明不同检索方法在不同类型查询上的适用性存在差异，也说明在后续实验中引入第二阶段重排具有必要性。
+X.X.3 E5 + Reranking 的总体结果分析
+在 E5 初始召回结果的基础上，本文进一步引入本地 CrossEncoder reranker，对前 20 个候选文献进行重排，以验证第二阶段精排是否能够提升前排检索质量。
+实验结果表明，加入 reranking 后，系统的前排表现得到了明显改善。总体上，Recall@10 从 0.5827 提升到 0.6053，Hit@10 从 0.5963 提升到 0.6198，MRR@10 从 0.4116 提升到 0.4637，MRR@100 从 0.4199 提升到 0.4706。与此同时，Recall@50、Recall@100 和 Hit@100 分别保持在 0.7386、0.7748 和 0.7889，与原始 E5 基本一致。
+这一结果表明，reranking 的主要作用不是扩大召回范围，而是对 E5 已经召回到前 20 的候选文献进行更细粒度的相关性排序，从而将真正相关的文献推到结果列表更靠前的位置。特别是 MRR@10 提升了 0.0522，MRR@100 提升了 0.0508，这说明首篇相关文献的平均排名明显前移，对用户实际检索体验具有较强意义。对于文献检索任务而言，用户往往更加关注前几条结果，因此这种前排排序质量的提升具有较高应用价值。
+X.X.4 E5 + Reranking 的分组结果分析
+进一步按照 query_set 对 reranking 的效果进行分析，可以发现其对不同类型查询的影响存在明显差异。
+对于 inline_acl，加入 reranking 后 Recall@10 基本保持不变，从 0.5398 变化为 0.5395，Hit@10 也保持在 0.5918 不变；但 MRR@10 从 0.3876 提升到 0.4210，MRR@100 从 0.3923 提升到 0.4262。这说明在该组中，reranker 并没有显著改变相关文献是否进入前 10 的结果，但能够进一步优化相关文献在前列中的相对顺序。
+对于 inline_nonacl，现象与 inline_acl 类似。Recall@10 从 0.5415 略微下降到 0.5395，Hit@10 保持在 0.5534 不变，但 MRR@10 从 0.3546 显著提升到 0.4077，MRR@100 从 0.3636 提升到 0.4173。说明对于这类更自由、更复杂的 inline 查询，CrossEncoder 能够在候选集内部进行更准确的细粒度相关性判断，从而将真正相关的文献进一步提前。
+相比之下，manual_acl 和 manual_iclr 两组在 reranking 后表现出更明显、也更全面的提升。对于 manual_acl，Recall@10 从 0.6194 提升到 0.6710，Hit@10 也同步从 0.6194 提升到 0.6710，MRR@10 从 0.4627 提升到 0.4959，MRR@100 从 0.4706 提升到 0.4995。这表明对于表达较规范、意图相对明确的人工构造查询，reranker 不仅能改善排序位置，还能将更多相关文献提前到前 10 个结果中。
+manual_iclr 的提升则最为显著。该组中 Recall@10 从 0.6813 提升到 0.7473，Hit@10 同样从 0.6813 提升到 0.7473，MRR@10 从 0.5085 大幅提升到 0.6107，MRR@100 也从 0.5196 提升到 0.6177。特别是 MRR@10 的增幅达到 0.1022，说明在该类查询上，CrossEncoder 的细粒度匹配能力得到了充分体现。结合前文可知，manual_iclr 是 BM25 相对 E5 更占优势的一组，而在加入 reranking 后，该组的前排排序性能反而出现了最显著的提升，说明第二阶段重排在这类表达集中、主题清晰的查询上具有很强的纠偏和增强作用。
+总体而言，reranking 对 inline_acl 和 inline_nonacl 的主要收益体现在 MRR 的提升上，即优化前列结果的具体排序；而对 manual_acl 和 manual_iclr，其不仅改善了 MRR，还明显提高了 Recall@10 和 Hit@10。这说明对于表达更规范、语义更明确的查询，CrossEncoder 更容易学习并利用查询与文献之间的细粒度匹配信号，从而获得更全面的提升。
+X.X.5 本节小结
+综合以上实验结果可以得出以下结论。首先，在基础检索阶段，E5 整体上显著优于 BM25，说明稠密检索方法在 LitSearch 任务中具备更强的语义建模能力。其次，这种优势主要体现在 inline_acl 和 inline_nonacl 等更复杂、更依赖语义理解的查询上；对于 manual_iclr 这类关键词特征更集中的查询，BM25 仍然具有一定竞争力。最后，在 E5 初始召回的基础上引入 CrossEncoder reranking 后，系统的前排检索质量得到进一步提升，尤其是在 MRR@10 和 MRR@100 上表现突出，说明第二阶段重排能够有效优化候选文献的排序顺序。
+因此，从整体实验结果来看，“E5 负责初始召回，CrossEncoder 负责候选重排” 的两阶段检索框架在 LitSearch 数据集上取得了最优效果。该结果说明，第一阶段稠密检索能够提供较强的候选覆盖能力，而第二阶段重排能够进一步提升前排结果质量，两者结合比单独使用任一方法都更适合该任务。
+你要是愿意，我下一条可以继续帮你把这一节再整理成更像论文成稿的版本，包括：
+表格标题、章节编号、过渡句、以及“图表引用版”排版。
+可以，下面这版可以直接放论文里。
+说明：E5+Rerank 指“对 E5 召回结果的前 20 个候选进行 CrossEncoder 重排，21 位及以后保持原 E5 顺序不变”。
+表 1  总体检索结果对比
+方法
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+BM25
+0.5149
+0.6668
+0.7362
+0.5260
+0.7487
+0.3522
+0.3610
+E5
+0.5827
+0.7386
+0.7748
+0.5963
+0.7889
+0.4116
+0.4199
+E5 + Rerank(top20)
+0.6053
+0.7386
+0.7748
+0.6198
+0.7889
+0.4637
+0.4706
+表 2  E5 与 E5+Rerank(top20) 总体对比及增量
+指标
+E5
+E5+Rerank
+Delta
+Recall@10
+0.5827
+0.6053
++0.0226
+Recall@50
+0.7386
+0.7386
++0.0000
+Recall@100
+0.7748
+0.7748
++0.0000
+Hit@10
+0.5963
+0.6198
++0.0235
+Hit@100
+0.7889
+0.7889
++0.0000
+MRR@10
+0.4116
+0.4637
++0.0521
+MRR@100
+0.4199
+0.4706
++0.0507
+表 3  按 query_set 分组的 BM25、E5 与 E5+Rerank(top20) 对比
+3.1 inline_acl
+方法
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+BM25
+0.4531
+0.5878
+0.6633
+0.4898
+0.7041
+0.2829
+0.2927
+E5
+0.5398
+0.6476
+0.6740
+0.5918
+0.7245
+0.3876
+0.3923
+E5 + Rerank(top20)
+0.5395
+0.6476
+0.6740
+0.5918
+0.7245
+0.4210
+0.4262
+3.2 inline_nonacl
+方法
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+BM25
+0.4111
+0.5553
+0.6621
+0.4229
+0.6759
+0.2648
+0.2737
+E5
+0.5415
+0.7055
+0.7609
+0.5534
+0.7747
+0.3546
+0.3636
+E5 + Rerank(top20)
+0.5395
+0.7055
+0.7609
+0.5534
+0.7747
+0.4077
+0.4173
+3.3 manual_acl
+方法
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+BM25
+0.5935
+0.7613
+0.8000
+0.5935
+0.8000
+0.4352
+0.4440
+E5
+0.6194
+0.7548
+0.7871
+0.6194
+0.7871
+0.4627
+0.4706
+E5 + Rerank(top20)
+0.6710
+0.7548
+0.7871
+0.6710
+0.7871
+0.4959
+0.4995
+3.4 manual_iclr
+方法
+Recall@10
+Recall@50
+Recall@100
+Hit@10
+Hit@100
+MRR@10
+MRR@100
+BM25
+0.7363
+0.9011
+0.9121
+0.7363
+0.9121
+0.5283
+0.5355
+E5
+0.6813
+0.9011
+0.9011
+0.6813
+0.9011
+0.5085
+0.5196
+E5 + Rerank(top20)
+0.7473
+0.9011
+0.9011
+0.7473
+0.9011
+0.6107
+0.6177
+表 4  按 query_set 分组的 E5 与 E5+Rerank(top20) 增量对比
+query_set
+ΔRecall@10
+ΔHit@10
+ΔMRR@10
+ΔMRR@100
+inline_acl
+-0.0003
++0.0000
++0.0333
++0.0339
+inline_nonacl
+-0.0020
++0.0000
++0.0531
++0.0537
+manual_acl
++0.0516
++0.0516
++0.0332
++0.0289
+manual_iclr
++0.0659
++0.0659
++0.1022
++0.0982
+实验设置
+可以。下面给你一版可直接放进论文正文的“实验设置”初稿，和你前面的“实验结果与分析”是配套的。你只需要把章节号、表号按你论文实际格式改一下。
+X.X 实验设置
+为系统评估不同检索方法在 LitSearch 任务上的表现，本文围绕 BM25、E5 稠密检索以及 E5 + CrossEncoder 重排 三种方案开展实验，并在统一的数据集、评价指标和实验环境下进行对比分析。
+X.X.1 数据集与任务说明
+本文实验使用 LitSearch 数据集。该数据集包含 597 条查询（query） 和 64183 篇候选文献。每条查询都对应一组标注的相关文献，用于评估检索系统返回结果与真实相关文献之间的一致程度。
+从任务形式上看，LitSearch 属于典型的学术文献检索任务：给定一个查询，系统需要从候选文献库中返回按相关性排序的结果列表。本文的实验重点是比较不同方法在该任务上的检索效果，尤其关注系统能否将相关文献排在结果列表前部。
+此外，数据集中的查询还带有 query_set 标记，本文进一步按照该字段对结果进行分组分析。具体包括以下四类：
+inline_acl
+inline_nonacl
+manual_acl
+manual_iclr
+其中，前两类可视为更贴近真实引用或上下文场景的查询，后两类则属于人工构造查询。通过分组实验，可以更细致地观察不同方法在不同查询类型上的适用性与优劣差异。
+X.X.2 对比方法
+本文共设置三类检索方案进行比较。
+（1）BM25
+BM25 作为经典的稀疏检索方法，以词项匹配为核心，通过统计词频和逆文档频率衡量查询与文献之间的相关性。本文首先基于 LitSearch 语料构建 BM25 索引，并据此生成检索结果，作为传统关键词匹配方法的基线模型。
+（2）E5 稠密检索
+E5 属于基于预训练语义表示的稠密检索方法。与 BM25 依赖显式词项重合不同，E5 通过将查询和文献映射到同一向量空间，利用向量相似度完成检索，因此更适合捕捉查询与文献之间的深层语义相关性。本文在项目原有实现基础上完成了 E5 检索实验，并在 GPU 环境下构建索引与生成检索结果。
+（3）E5 + CrossEncoder Reranking
+在 E5 初始召回结果的基础上，本文进一步引入第二阶段重排（reranking）机制。具体做法是：先利用 E5 获得候选文献列表，再使用本地 CrossEncoder 模型对前若干个候选文献进行精排，从而进一步优化前排排序质量。实验中采用的重排模型为 BAAI/bge-reranker-base，并对 E5 召回结果前 20 个候选文献进行重排；第 21 位及之后的候选文献保持原始 E5 顺序不变。这样既能保留 E5 的整体召回能力，又能利用 CrossEncoder 的细粒度匹配能力改善前排结果质量。
+X.X.3 索引内容与实验流程
+为保证不同方法之间的可比性，本文在检索阶段统一采用文献的 标题（title）和摘要（abstract） 作为索引内容。对于每条查询，系统输出一个按相关性排序的候选文献列表，再与该查询对应的真实相关文献集合进行比较。
+整体实验流程如下：
+使用 BM25 或 E5 对全部候选文献进行初始检索；
+生成按相关性排序的检索结果列表；
+在 E5 的结果基础上，对前 20 个候选文献使用 CrossEncoder 进行第二阶段重排；
+基于标注的相关文献集合计算各项检索指标；
+在总体层面和 query_set 分组层面分别对实验结果进行分析。
+该流程对应了一个典型的两阶段检索框架，即“第一阶段负责候选召回，第二阶段负责候选精排”。
+X.X.4 评价指标
+为了从不同角度评估检索方法的效果，本文采用了 Recall、Hit 和 MRR 三类指标，并分别在不同截断位置上进行计算。
+（1）Recall@K
+Recall@K 用于衡量在前 K 个检索结果中召回了多少真实相关文献，其计算公式为：
+[
+Recall@K = \frac{|Relevant \cap TopK|}{|Relevant|}
+]
+其中，Relevant 表示该查询对应的真实相关文献集合，TopK 表示系统返回的前 K 个结果。Recall 越高，说明系统的召回能力越强。
+（2）Hit@K
+Hit@K 用于判断前 K 个结果中是否至少包含一篇相关文献。如果命中，则记为 1，否则记为 0。对全部查询求平均后，可以反映系统在前 K 个结果中“至少找对一次”的概率。
+（3）MRR@K
+MRR（Mean Reciprocal Rank）用于衡量首篇相关文献在结果列表中的位置，其计算方式为首个相关结果排名倒数的平均值：
+[
+MRR@K = \frac{1}{N} \sum_{i=1}^{N} \frac{1}{rank_i}
+]
+其中，(rank_i) 表示第 (i) 条查询的首篇相关文献在前 K 个结果中的排名；若前 K 个结果中不存在相关文献，则该项记为 0。MRR 越高，说明相关文献越靠近结果列表前部。
+本文具体报告以下指标：
+Recall@10、Recall@50、Recall@100
+Hit@10、Hit@100
+MRR@10、MRR@100
+其中，Recall 与 Hit 更侧重于考察检索系统的覆盖能力，而 MRR 更关注用户实际最敏感的前排排序质量。
+X.X.5 实验环境
+本文实验主要在本地 Windows 环境和 AutoDL GPU 服务器环境中完成。其中，BM25 实验主要在本地完成，E5 及 Reranking 实验在 GPU 环境中完成。服务器端主要配置如下：
+GPU：RTX 4090D（24GB）
+Python：3.10
+PyTorch：2.1.2+cu121
+CUDA：可用
+此外，为保证深度学习模型在服务器环境中稳定运行，实验中采用了如下依赖组合：
+numpy==1.26.4
+sentence-transformers==2.7.0
+transformers==4.41.2
+上述版本组合在实际实验中能够稳定支持 E5 向量检索与 CrossEncoder 重排。
+X.X.6 实现细节
+在实现层面，本文对项目代码进行了必要的适配与调整，以保证实验能够在当前硬件和软件环境下稳定运行。
+对于 E5 检索实验，原实现中包含 bfloat16 精度设置，但该设置在当前环境下会导致运行错误，因此实验中将其移除，并使用标准浮点计算完成编码。与此同时，为避免显存占用过高，E5 的推理批大小最终设置为 32。在该设置下，能够稳定完成语料编码、索引构建与检索实验。
+对于 reranking 实验，项目原始代码依赖 Azure OpenAI 接口，无法直接满足本文实验需求。为此，本文保留了原有的检索与结果写回流程，并新增本地重排脚本，将原先基于 API 的排序模块替换为本地 CrossEncoder 推理。具体而言，实验采用 BAAI/bge-reranker-base 作为重排模型，推理设备设置为 GPU，批大小设置为 4，最大输入长度设置为 512。实验中仅对 E5 检索结果前 20 个候选文献进行重排，以降低计算开销并突出第二阶段排序对前排结果的优化作用。
+在结果评估方面，本文实现了独立的指标计算脚本，对总体结果和不同 query_set 分组结果分别进行统计分析，从而保证实验结果可复现、可对比。
+X.X.7 本节小结
+本节介绍了本文实验所使用的数据集、对比方法、评价指标、实验环境与关键实现细节。整体上，本文采用统一的数据集和评估标准，对 BM25、E5 以及 E5 + CrossEncoder Reranking 三种方案进行了系统比较。其中，BM25 作为传统关键词匹配基线，E5 作为稠密检索代表模型，而 E5 + Reranking 则对应两阶段检索框架。上述设置为后续实验结果分析提供了统一、可靠的基础。
+如果你要，我下一条可以继续直接给你两版之一：
+“相关技术介绍” 那一节，或者 “方法设计/系统实现” 那一节。
+下面给你一版**“重排深度消融实验”正文初稿**，可以直接接在你前面的实验结果分析后面。
+E5 + rerank(top20)+rerank(top50)
+ 重排深度消融实验
+为了进一步分析第二阶段重排范围对检索性能的影响，本文在 E5 初始召回结果的基础上，分别设置了 Rerank(top20) 和 Rerank(top50) 两种重排深度进行对比实验。其中，Rerank(top20) 表示仅对 E5 返回结果中的前 20 个候选文献进行 CrossEncoder 精排；Rerank(top50) 则表示将重排范围扩大到前 50 个候选文献，而第 51 位及之后的结果保持原始 E5 顺序不变。通过这一设置，可以观察随着重排候选范围扩大，系统前排检索质量是否会持续提升。
+从总体结果来看，随着重排深度从 top20 扩展到 top50，系统性能进一步提高。原始 E5 的 Recall@10、Hit@10 和 MRR@10 分别为 0.5827、0.5963 和 0.4116；在采用 Rerank(top20) 后，这些指标分别提升至 0.6053、0.6198 和 0.4637；进一步扩大到 Rerank(top50) 后，Recall@10、Hit@10 和 MRR@10 又进一步提升到 0.6288、0.6399 和 0.4683。与此同时，MRR@100 也从 0.4199 依次提升到 0.4706 和 0.4747。相比之下，Recall@50、Recall@100 和 Hit@100 在三种设置下基本保持不变。这说明扩大重排范围并不会改变系统整体的召回覆盖范围，但能够进一步改善前排排序质量。
+从增量角度看，Rerank(top20) 相比原始 E5 已经带来了较大提升，尤其是在 MRR 指标上最为明显；而 Rerank(top50) 虽然继续优于 Rerank(top20)，但提升幅度已经明显缩小。例如，Recall@10 从 E5 到 Rerank(top20) 提升了 0.0226，而从 Rerank(top20) 到 Rerank(top50) 仅进一步提升 0.0235；MRR@10 则从 0.4116 提升到 0.4637 后，又仅进一步提升到 0.4683。这表明随着重排深度增加，系统性能仍能持续优化，但其收益呈现出一定的边际递减趋势。换言之，前 20 个候选文献已经包含了大量高价值候选，继续扩大到前 50 个候选虽然仍有帮助，但额外收益相对有限。
+分组结果进一步表明，不同类型查询对重排深度的敏感性并不一致。对于 inline_acl 查询，Rerank(top20) 已经能够显著提升 MRR@10 和 MRR@100，而扩大到 top50 后，MRR 虽然继续小幅上升，但 Recall@10 和 Hit@10 反而略有下降。这说明对于此类查询，更深的重排并不一定带来更好的 top10 覆盖效果，其主要收益仍体现在前列排序细化上。对于 inline_nonacl 查询，Rerank(top50) 与 Rerank(top20) 的差异较小，整体上 top50 仅带来非常有限的额外改进，表明这类查询对重排深度的扩展并不十分敏感。
+相比之下，manual_acl 和 manual_iclr 两组对更深的重排范围表现出更明显的收益。在 manual_acl 组中，Recall@10 从 E5 的 0.6194 提升到 Rerank(top20) 的 0.6710，并进一步提升到 Rerank(top50) 的 0.7032；Hit@10 和 MRR 指标也呈现出相同趋势。在 manual_iclr 组中，这种现象更加突出：Recall@10 从 0.6813 提升到 0.7473，并进一步提升到 0.8242；MRR@10 则从 0.5085 提升到 0.6107，再进一步提升到 0.6320。可见，对于表达更明确、主题更集中、语义边界更清晰的人工构造查询，扩大重排深度能够持续带来明显收益，说明更多潜在相关文献在 top20 之外、top50 之内被重新排序到更靠前位置。
+综合来看，重排深度的扩展对系统总体性能具有正向作用，但这种作用并非在所有查询类型上都同样显著。对于 inline_acl 和 inline_nonacl，top20 已经能够捕获大部分重排收益，继续扩大到 top50 的额外提升有限；而对于 manual_acl 和 manual_iclr，top50 明显优于 top20，表明更深的候选重排对于此类查询更加必要。总体上，E5 + Rerank(top50) 在本文所有实验设置中取得了最优结果，因此可以将其视为当前实验条件下的最佳检索方案。
+下面再给你一版更短一些的本节小结，可以接在这一小节最后：
+本节通过对比 Rerank(top20) 与 Rerank(top50)，分析了重排深度对检索效果的影响。实验表明，扩大重排范围能够进一步提升系统前排排序质量，但收益存在边际递减现象。对于人工构造查询，top50 的提升更加明显；对于 inline 查询，top20 已经能够获得大部分收益。综合总体结果与分组结果，本文最终选择 E5 + Rerank(top50) 作为重排阶段的最优配置。
+E5 + rerank(top20)+rerank(top50)+rerank(top100)
+X.X.X 效率对比与结果权衡分析
+除了检索效果之外，第二阶段重排方法在实际应用中的计算开销同样值得关注。由于 CrossEncoder 需要对查询与候选文献逐对进行相关性建模，其计算复杂度明显高于第一阶段的向量检索。因此，在重排深度逐渐增加的情况下，系统性能提升是否能够覆盖其额外开销，是需要进一步分析的问题。基于此，本文对 E5、E5 + Rerank(top20)、E5 + Rerank(top50) 和 E5 + Rerank(top100) 四种设置进行了效果与效率的综合比较。
+从实验结果来看，随着重排深度从 top20 增加到 top50，再进一步扩大到 top100，系统在部分指标上持续提升，但计算时间也显著增加。整体而言，原始 E5 的 Recall@10、Hit@10 和 MRR@10 分别为 0.5827、0.5963 和 0.4116；在引入 Rerank(top20) 后，这些指标提升至 0.6053、0.6198 和 0.4637；当重排深度扩展到 top50 时，Recall@10 和 Hit@10 进一步提高到 0.6288 和 0.6399，MRR@10 也达到最高值 0.4683；继续扩大到 top100 后，Recall@10 和 Hit@10 分别进一步上升到 0.6321 和 0.6432，但 MRR@10 和 MRR@100 反而下降到 0.4561 和 0.4622。与此同时，运行时间则从 top20 的约 59 分钟，增加到 top50 的约 1 小时 59 分钟，再增加到 top100 的约 3 小时 40 分钟。
+这一结果说明，重排深度越大，并不意味着所有指标都会持续提升。具体而言，top100 在 Recall@10 和 Hit@10 上优于 top50，说明更大的重排范围有助于将更多相关文献提前到前 10 个结果中；但 top50 在 MRR@10 和 MRR@100 上优于 top100，说明其更有利于将首篇相关文献推到更靠前的位置。换言之，top100 更偏向于提升前排结果中的相关文献覆盖率，而 top50 更偏向于优化首个相关文献的平均排序位置。对于以学术检索为目标的任务而言，这两类收益都具有意义，但其关注重点并不完全相同。
+从效率角度分析，top20 已经能够在相对较低的计算成本下显著提升系统性能，是一种性价比较高的重排配置；top50 虽然耗时进一步增加，但在 Recall@10、Hit@10、MRR@10 和 MRR@100 上取得了更均衡的提升，因此可视为效果与成本之间较好的折中方案；top100 则需要最高的计算开销，虽然在 Recall@10 和 Hit@10 上达到最优，但其 MRR 指标反而低于 top50，说明进一步扩大重排范围后，收益开始出现不稳定现象。总体来看，随着重排深度不断扩大，系统性能的提升呈现出明显的边际收益递减特征，而计算代价却持续线性上升。
+因此，若从“综合检索质量”角度出发，特别是考虑前排排序的稳定性与平均首个相关文献位置，E5 + Rerank(top50) 更适合作为本文实验中的最终推荐方案；若更加关注前 10 个结果中相关文献的覆盖能力，则 E5 + Rerank(top100) 在 Recall@10 和 Hit@10 上具有一定优势。结合学术检索场景中用户通常更关注前几条结果的排序质量，以及计算成本的现实约束，本文最终认为 top50 是效果与效率之间更合理的折中选择。
+表后总结段（可接在表格后）
+综合效率与效果对比结果可知，第二阶段重排能够显著改善 E5 的前排检索质量，但重排深度的增加并非总能带来稳定收益。top20 已经能够取得明显提升，top50 在多项关键指标上进一步达到最佳平衡，而 top100 虽然在 Recall@10 和 Hit@10 上表现最优，但其 MRR 指标有所回落，且耗时显著增加。由此可见，在本文实验设置下，E5 + Rerank(top50) 更适合作为最终检索方案。
+对应表格模板
+表 X-X 不同重排深度下的效果与效率对比
+方法
+Recall@10
+Hit@10
+MRR@10
+MRR@100
+运行时间
+E5
+0.5827
+0.5963
+0.4116
+0.4199
+—
+E5 + Rerank(top20)
+0.6053
+0.6198
+0.4637
+0.4706
+约 59 min
+E5 + Rerank(top50)
+0.6288
+0.6399
+0.4683
+0.4747
+约 119 min
+E5 + Rerank(top100)
+0.6321
+0.6432
+0.4561
+0.4622
+约 220 min
+如果你要，我下一条可以继续给你：
+把整章实验部分串起来的“本章小结”正文初稿。
+原型系统初步检测
+对比 1：查询理解
+对比 2：上下文构建
+下面这段可以直接作为论文中 “端到端原型系统实现” 小节正文使用，和前面的实验分析小节是衔接的。
+4.X 端到端原型系统实现
+在完成检索与重排实验之后，本文进一步实现了一个面向科学文献问答场景的最小端到端 RAG 原型系统，以验证前述方法在实际问答流程中的可部署性与可运行性。该原型系统围绕“用户问题输入—查询理解—文献检索—文档重排—上下文构建—回答生成—引用展示”的完整流程展开设计，在不破坏现有检索评测代码的前提下，采用模块化方式新增系统实现代码，并将相关文件统一组织在 rag/ 目录下。系统整体流程如图所示，可表示为：question → query understanding → E5 retrieval → rerank(top50) → context building → answer generation → citations。
+在系统实现层面，本文遵循“尽量复用已有能力、尽量减少对原实验代码侵入”的原则。首先，在检索阶段，系统直接复用已有的 E5 检索能力，避免重新实现文献向量召回逻辑；在重排阶段，系统基于本地 CrossEncoder 重排方案完成前 top50 候选文献的精排，以继承前文实验中验证有效的主方案 E5 + rerank(top50)。考虑到原始检索与重排脚本主要面向离线实验设计，不完全适合在端到端问答流程中直接调用，因此本文在 rag/ 目录下对原有能力进行了轻量封装，使其能够以函数化、模块化方式被主流程调用，同时保证原有 eval/ 下的实验脚本、评测脚本和分析代码保持不变。通过这种方式，系统既能共享既有实验成果，又能避免因大规模修改原项目结构而引入新的不稳定因素。
+为提升系统可维护性和后续扩展能力，端到端原型采用模块化结构实现，主要包括查询理解模块、检索与重排封装模块、上下文构建模块、回答生成模块以及主调度入口模块。查询理解模块负责对用户输入问题进行轻量分析和改写，当前支持 original 和 keywords 两种模式。其中，original 模式直接保留原始问题表达，keywords 模式则从原问题中提取更聚焦的关键词短语，用于改善文献召回效果。该模块的设计重点不在于复杂训练，而在于以较低实现成本提升检索意图表达质量，并为后续实验对比提供可控变量。
+检索与重排封装模块负责将已有 E5 检索能力与本地重排模型串联起来。系统首先利用 E5 在已有文献索引中召回前 top_k 篇候选文献，然后调用本地重排模型对前 rerank_top_k 篇候选进行细粒度打分与排序，其余文献则保持原始顺序不变。该设计与前文重排实验保持一致，能够保证系统实现与实验结论的统一性。同时，为确保原型系统在环境不完整时仍可联调，系统还支持在缺少完整索引时回退到本地小规模样例语料进行测试，从而降低开发和调试成本。
+上下文构建模块主要负责将重排后的文献结果组织成可供回答生成模块使用的上下文表示。当前实现中，本文设计了 plain 与 structured 两种策略。plain 策略直接拼接候选文献的标题与摘要信息，构造连续文本上下文；structured 策略则进一步保留文献编号、标题、摘要、排序位置与分数字段，并按 [D1]、[D2] 等形式组织证据。为避免上下文过长对系统运行造成影响，模块同时支持对单篇文献长度进行截断控制。该设计不仅有利于后续实验中对不同上下文增强策略进行比较，也为未来接入真实大模型时实现更稳定的引用对齐和证据追踪提供了基础。
+回答生成模块当前采用可替换后端设计，以适应不同阶段的系统开发需求。在当前原型阶段，由于系统实现重点在于验证检索增强链路与上下文组织方式，因此回答生成优先采用 mock 后端。该后端基于已构建上下文生成模板化回答，并尽量显式引用文献编号，如 [D1]、[D2] 等，以体现科学文献问答系统的可解释性特征。与此同时，系统在实现时预留了 local 后端接口，使得后续可在不重构主流程的前提下，直接接入本地生成模型或外部 API 作为真实回答模块。也就是说，当前实现虽然在回答生成能力上采用了轻量化方案，但整体架构已经为后续增强留出了清晰接口。
+主入口模块 run_rag_demo.py 负责串联上述各功能模块，并提供统一的命令行参数接口。用户可以通过命令行输入问题，并灵活配置查询理解模式、上下文策略、回答后端、召回文献数量和重排深度等关键参数。系统运行后，能够依次输出原始问题、查询理解结果、初始检索结果、重排后结果、上下文内容、最终回答和引用列表，从而为调试、分析和论文展示提供完整可见的中间过程。这种“显式展示中间状态”的实现方式不仅有助于系统开发过程中的问题定位，也强化了原型系统的可解释性，使研究者能够观察不同模块设置对最终输出的影响。
+从工程实现角度看，本文所实现的端到端原型具有三个特点。首先，系统复用了前期已验证有效的检索与重排主方案，保证了系统实现与实验结论的一致性。其次，系统采用低侵入式扩展方法，将新增功能集中在 rag/ 目录中，避免破坏原有实验框架，便于后续维护与迭代。最后，系统在回答生成环节采用了“先闭环、后增强”的设计思路，即先用轻量 mock 模块验证问答链路的完整性，再为未来接入真实生成模型预留扩展接口。这种实现路径符合毕业设计阶段“先验证可行性，再逐步增强能力”的总体要求。
+综合来看，本文完成的端到端原型系统虽然仍属于最小可运行版本，但已经具备科学文献 RAG 系统的基本要素：能够理解用户问题、完成文献召回与重排、组织证据上下文，并生成带引用的回答结果。该原型的实现不仅验证了前期检索增强方法的工程可落地性，也为后续开展查询理解策略比较、上下文增强实验以及小规模问答评测奠定了系统基础。
+如果你要，我下一条可以继续给你写 “查询理解模块设计与实现” 小节正文。
+4.X 端到端原型实验结果分析
+在完成 BM25、E5 检索及 E5 + rerank(top50) 重排实验的基础上，本文进一步搭建了面向科学文献问答的最小端到端 RAG 原型系统，以验证所提出方法在真实问答流程中的可用性。该原型系统实现了从用户问题输入、查询理解、文献检索、文档重排、上下文构建到回答生成与引用展示的完整闭环，主流程为：question → query understanding → E5 retrieval → rerank(top50) → context building → answer generation → citations。其中，检索主干采用已验证有效的 E5 模型，重排阶段采用本地 CrossEncoder 重排模型，回答生成阶段暂采用 mock 方式模拟基于证据的回答输出，以便在不引入额外生成模型变量的情况下，优先验证系统链路的完整性与模块设计的合理性。
+从原型系统运行结果来看，当前方案已经能够在真实索引和本地重排模型支持下稳定运行。系统能够接收自然语言问题，完成查询理解，并基于检索与重排结果构建上下文，最终输出带有文献引用标记的回答结果。实验表明，所设计的端到端流程不存在明显的模块断裂问题，各阶段输入输出关系清晰，说明本文前期完成的检索与重排实验能够较自然地过渡到完整的科学文献问答场景中。这一结果表明，本文提出的系统不仅能够在离线检索指标上取得较好表现，也具备进一步演化为可交互学术问答系统的实现基础。
+在查询理解模块上，本文比较了 original 与 keywords 两种方式的效果。以“Are there any research papers on methods to compress large-scale language models?” 为测试问题时，original 模式直接保留原始自然语言问题，而 keywords 模式则将问题压缩为更聚焦的检索表达，并显式提取关键词。实验结果显示，keywords 模式在初始召回阶段得到的文献结果更集中于“语言模型压缩方法”这一核心主题，例如低秩分解、矩阵分解、剪枝与压缩表示等方向；相较之下，original 模式虽然也能召回相关文献，但更容易引入与“大规模语言模型”相关但主题更宽泛的候选结果。进一步观察重排后的前列文献可以发现，keywords 模式下的前排结果与问题意图一致性更高，最终回答也更接近对“压缩方法类型”的总结，而不是围绕某一具体技术路线进行展开。这说明对于方法型学术问题，关键词化的查询理解策略有助于减少自然语言问句噪声，提高检索结果与最终回答的主题聚焦能力。
+在上下文增强策略方面，本文对 plain 与 structured 两种上下文构建方式进行了对比。plain 策略主要采用直接拼接候选文献标题与摘要的方式构建上下文，而 structured 策略则显式保留文献编号、标题、摘要、排序位置和分数等结构化信息。实验结果表明，在当前 mock 回答后端下，两种策略生成的最终回答内容差异并不显著，说明在轻量回答模块条件下，最终输出主要受检索与重排结果质量驱动，而对上下文组织形式的敏感性相对有限。然而，从上下文展示形式来看，structured 策略使不同文献证据之间的边界更加清晰，有利于回答中的引用对齐与证据追踪，也更符合科学文献问答系统对于可解释性的要求。因此，尽管其在当前轻量生成阶段尚未带来明显的答案质量提升，structured 策略依然在可解释性与后续扩展性方面表现更优，更适合作为当前原型系统的默认上下文增强方案。
+综合上述实验结果可以得到以下结论。首先，基于 E5 + rerank(top50) 的检索主干能够有效支撑端到端 RAG 原型系统运行，验证了前文检索与重排实验结论在问答场景中的可迁移性。其次，在查询理解模块中，keywords 相较 original 更适合作为当前系统的默认配置，其优势主要体现在降低问句噪声、增强主题聚焦和改善前排证据质量上。再次，在上下文构建模块中，structured 策略虽然在 mock 回答阶段未显著提高答案内容质量，但在证据组织、引用展示和可解释性方面具有明显优势。基于这些结果，本文当前阶段的端到端原型主方案可确定为：keywords query understanding + E5 retrieval + rerank(top50) + structured context + mock answer。
+需要说明的是，当前原型系统中的回答生成模块仍采用 mock 方式，主要目的是验证检索增强链路与上下文组织策略的可行性，而非评估真实大模型的最终生成能力。因此，当前实验结论更适用于系统设计与模块有效性验证，而不代表完整生成式学术问答系统的最终上限。后续工作中，可在保持当前检索与上下文增强框架不变的前提下，引入真实生成模型，对 plain 与 structured 上下文在回答质量、引用准确性和可解释性方面的差异进行进一步验证。同时，还可基于更多问题样本构建小规模问答评测集，对查询理解策略和上下文增强策略开展更系统的定量分析。
+如果你要，我下一条可以继续给你写 “端到端原型系统实现” 小节正文，和这段正好衔接。
+准备小规模问答测试集
+也就是挑 10~20 个问题，分成几类，比如：
+方法型问题
+定义型问题
+比较型问题
+推荐型问题
+然后用你当前主方案跑一遍，为后面论文“有效性验证”做准备。
+可以，下面这段可直接作为你论文中 “查询理解模块设计与实现” 小节正文使用，风格和前文保持一致。
+4.X 查询理解模块设计与实现
+在科学文献问答场景中，用户输入通常以自然语言问题形式出现，具有表达灵活、语义完整但检索噪声较多的特点。与传统关键词检索不同，自然语言问题往往包含大量功能性成分，如疑问表达、语气结构和非核心修饰语，这些内容虽然对人类理解问题有帮助，但未必有利于检索模型准确捕捉问题的核心学术意图。因此，在端到端 RAG 系统中，仅将原始问题直接送入检索模块，容易导致召回结果主题分散，进而影响后续重排与回答生成质量。基于这一考虑，本文在已有检索与重排框架基础上，设计并实现了一个轻量查询理解模块，用于在用户问题进入检索阶段之前，对其进行规范化处理与意图压缩表示。
+本文所实现的查询理解模块遵循“轻量、可解释、低成本、易集成”的设计原则。一方面，本科毕业设计阶段不宜引入复杂的训练式查询改写模型，否则会显著增加额外数据准备、参数训练与系统调试成本；另一方面，查询理解模块应能够与已有 E5 检索主干自然衔接，并保留足够强的可解释性，便于分析其对检索结果的影响。因此，本文并未直接复现复杂的生成式 query rewriting 方法，而是面向科学文献问答场景，设计了两种可控的查询理解模式：original 与 keywords。其中，original 模式直接保留原始自然语言问题，用作基线输入；keywords 模式则从原始问题中提取更具检索意义的关键词或短语表达，用于弱化问句结构中的噪声信息，增强问题核心主题的显式表达。
+从实现方式上看，查询理解模块接收用户输入问题后，首先保留原始问题文本作为 original_query，以便后续输出与分析。在 original 模式下，系统直接将原始问题作为检索输入；在 keywords 模式下，系统通过轻量规则方法对问题进行处理，包括去除疑问表达、过滤部分非核心功能词、保留学术实体和主题相关关键词，并将处理后的结果重新组织为更紧凑的检索表达。同时，模块还输出一个关键词列表，用于辅助调试与结果分析。通过这种设计，系统能够显式展示“原问题—压缩表达—关键词集合”之间的对应关系，从而保证查询理解过程本身具有较强可解释性。
+本文之所以采用关键词化查询理解策略，主要基于以下考虑。首先，科学文献检索任务的目标通常不是复现用户问题的完整表面表达，而是尽可能准确地提取其学术主题和研究意图。例如，当用户提出“Are there any research papers on methods to compress large-scale language models?”这类问题时，真正决定文献检索结果的核心信息并不是疑问句式本身，而是“compress”、“large-scale language models”、“methods”等关键词及其组合关系。其次，关键词化表达更符合文献检索模型的召回特征，能够使问题表示向“研究主题”而非“口语问题”靠拢，从而提高候选文献的主题集中度。最后，该策略实现简单，不依赖额外标注数据和训练过程，适合作为原型系统中的查询理解起点，也便于后续与更复杂的改写方法进行对比。
+从系统集成角度看，查询理解模块位于端到端原型的最前端，是连接用户问题与检索模块的关键中间层。主流程中，系统首先接收用户输入问题，然后调用查询理解模块生成对应的查询表示，再将该表示送入 E5 检索模块执行初始召回。由于该模块输出的是更适合文献检索的表达形式，因此它对后续检索结果质量具有直接影响。与此同时，模块还将原始问题、改写结果与关键词列表一并输出，使系统能够在调试与实验分析阶段直观观察不同查询模式下的行为差异。这种实现方式使查询理解不仅是一个“内部预处理步骤”，也成为一个可以独立分析、可进行消融实验的系统模块。
+在实验验证中，本文以方法型学术问题为例，对 original 与 keywords 两种查询理解模式进行了对比。结果表明，相较于直接使用原始自然语言问题进行检索，关键词化后的查询表达能够更有效地减少问句形式带来的干扰，使初始召回结果更加集中于问题核心主题。在 E5 + rerank(top50) 主方案下，keywords 模式下的前列文献更聚焦于低秩分解、矩阵分解、剪枝与压缩表示等模型压缩方法，而 original 模式则更容易召回一些与大规模语言模型相关但主题分散的文献。由此可见，轻量关键词化查询理解虽然不属于复杂的算法创新，但作为一种面向学术问答场景的系统级增强策略，能够在不增加训练成本的前提下提升检索聚焦能力和回答主题一致性。
+综合来看，本文设计与实现的查询理解模块并非对已有复杂查询改写方法的直接复现，而是结合科学文献 RAG 场景需求，在现有 LitSearch 检索与重排框架基础上新增的一层轻量扩展。其主要贡献在于：将查询理解作为独立模块纳入端到端科学文献问答系统设计，提出了基于关键词压缩表达的轻量实现方案，并通过端到端原型实验验证了其对方法型问题检索效果的正向作用。该模块的实现为后续进一步引入更复杂的 query rewrite 方法、实体增强方法或面向不同问题类型的自适应查询策略奠定了基础。
+如果你要，我下一条可以继续给你写 “上下文增强策略设计与实现” 小节正文。
