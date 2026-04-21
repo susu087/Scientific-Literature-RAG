@@ -89,19 +89,28 @@ def run_rag_case(
     query_mode: str = "keywords",
     context_strategy: str = "structured",
     answer_backend: str = "mock",
+    retrieval_pipeline: str = "e5",
     top_k: int = 100,
     rerank_top_k: int = 50,
     context_top_n: int = 5,
     per_doc_max_chars: int = 1200,
     retrieval_index_path: str = os.path.join("retrieval_indices", "LitSearch.title_abstract.e5"),
+    bm25_index_path: str = os.path.join("retrieval_indices", "LitSearch.title_abstract.bm25"),
     dataset_path: str = "princeton-nlp/LitSearch",
     local_corpus_path: str = os.path.join("data", "corpus_sample.json"),
     reranker_model: str = "BAAI/bge-reranker-base",
     reranker_batch_size: int = 4,
     reranker_max_length: int = 512,
     device: str = "cuda",
+    answer_model: str = "gpt-4o-mini",
+    answer_base_url: str = "https://aihubmix.com/v1",
+    answer_temperature: float = 0.0,
+    answer_max_tokens: int = 800,
+    reason_top_n: int = 10,
+    reason_model: str = "gpt-4o-mini",
+    reason_base_url: str = "https://aihubmix.com/v1",
 ) -> Dict[str, Any]:
-    from rag.retrieval_pipeline import E5Retriever, LocalReranker, run_retrieval_and_rerank
+    from rag.retrieval_pipeline import E5Retriever, LocalReranker, run_final_hybrid_reason_pipeline, run_retrieval_and_rerank
 
     query_result = understand_query(question, mode=query_mode)
     retrieval_query = str(query_result["rewritten_query"])
@@ -118,13 +127,28 @@ def run_rag_case(
         max_length=reranker_max_length,
         device=device,
     )
-    pipeline_result = run_retrieval_and_rerank(
-        query_text=retrieval_query,
-        retriever=retriever,
-        top_k=top_k,
-        rerank_top_k=rerank_top_k,
-        reranker=reranker,
-    )
+    if retrieval_pipeline == "e5":
+        pipeline_result = run_retrieval_and_rerank(
+            query_text=retrieval_query,
+            retriever=retriever,
+            top_k=top_k,
+            rerank_top_k=rerank_top_k,
+            reranker=reranker,
+        )
+    elif retrieval_pipeline == "final":
+        pipeline_result = run_final_hybrid_reason_pipeline(
+            query_text=retrieval_query,
+            e5_retriever=retriever,
+            bm25_index_path=bm25_index_path,
+            top_k=top_k,
+            rerank_top_k=rerank_top_k,
+            reranker=reranker,
+            reason_top_n=reason_top_n,
+            reason_model=reason_model,
+            reason_base_url=reason_base_url,
+        )
+    else:
+        raise ValueError(f"Unsupported retrieval pipeline: {retrieval_pipeline}")
 
     context_text, context_docs = build_context(
         pipeline_result["reranked_docs"],
@@ -137,6 +161,10 @@ def run_rag_case(
         context=context_text,
         documents=context_docs,
         backend=answer_backend,
+        model=answer_model,
+        base_url=answer_base_url,
+        temperature=answer_temperature,
+        max_tokens=answer_max_tokens,
     )
 
     return {
@@ -154,17 +182,26 @@ def run_rag_case(
             "query_mode": query_mode,
             "context_strategy": context_strategy,
             "answer_backend": answer_backend,
+            "retrieval_pipeline": retrieval_pipeline,
             "top_k": top_k,
             "rerank_top_k": rerank_top_k,
             "context_top_n": context_top_n,
             "per_doc_max_chars": per_doc_max_chars,
             "retrieval_index_path": retrieval_index_path,
+            "bm25_index_path": bm25_index_path,
             "dataset_path": dataset_path,
             "local_corpus_path": local_corpus_path,
             "reranker_model": reranker_model,
             "reranker_batch_size": reranker_batch_size,
             "reranker_max_length": reranker_max_length,
             "device": device,
+            "answer_model": answer_model,
+            "answer_base_url": answer_base_url,
+            "answer_temperature": answer_temperature,
+            "answer_max_tokens": answer_max_tokens,
+            "reason_top_n": reason_top_n,
+            "reason_model": reason_model,
+            "reason_base_url": reason_base_url,
         },
     }
 
@@ -174,18 +211,27 @@ def main() -> None:
     parser.add_argument("--question", type=str, required=True, help="User question for the RAG demo.")
     parser.add_argument("--query_mode", type=str, default="keywords", choices=["original", "keywords"])
     parser.add_argument("--context_strategy", type=str, default="structured", choices=["plain", "structured"])
-    parser.add_argument("--answer_backend", type=str, default="mock", choices=["mock", "local"])
+    parser.add_argument("--answer_backend", type=str, default="mock", choices=["mock", "local", "api", "openai", "aihubmix"])
+    parser.add_argument("--retrieval_pipeline", type=str, default="e5", choices=["e5", "final"])
     parser.add_argument("--top_k", type=int, default=100, help="Number of E5 retrieved documents.")
     parser.add_argument("--rerank_top_k", type=int, default=50, help="Rerank depth. Keep this at 50 for the main setup.")
     parser.add_argument("--context_top_n", type=int, default=5, help="Number of reranked docs used to build context.")
     parser.add_argument("--per_doc_max_chars", type=int, default=1200)
     parser.add_argument("--retrieval_index_path", type=str, default=os.path.join("retrieval_indices", "LitSearch.title_abstract.e5"))
+    parser.add_argument("--bm25_index_path", type=str, default=os.path.join("retrieval_indices", "LitSearch.title_abstract.bm25"))
     parser.add_argument("--dataset_path", type=str, default="princeton-nlp/LitSearch")
     parser.add_argument("--local_corpus_path", type=str, default=os.path.join("data", "corpus_sample.json"))
     parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-base")
     parser.add_argument("--reranker_batch_size", type=int, default=4)
     parser.add_argument("--reranker_max_length", type=int, default=512)
     parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--answer_model", type=str, default="gpt-4o-mini")
+    parser.add_argument("--answer_base_url", type=str, default="https://aihubmix.com/v1")
+    parser.add_argument("--answer_temperature", type=float, default=0.0)
+    parser.add_argument("--answer_max_tokens", type=int, default=800)
+    parser.add_argument("--reason_top_n", type=int, default=10)
+    parser.add_argument("--reason_model", type=str, default="gpt-4o-mini")
+    parser.add_argument("--reason_base_url", type=str, default="https://aihubmix.com/v1")
     parser.add_argument("--show_context_chars", type=int, default=2000)
     parser.add_argument("--save_json", type=str, default="")
     args = parser.parse_args()
@@ -195,17 +241,26 @@ def main() -> None:
         query_mode=args.query_mode,
         context_strategy=args.context_strategy,
         answer_backend=args.answer_backend,
+        retrieval_pipeline=args.retrieval_pipeline,
         top_k=args.top_k,
         rerank_top_k=args.rerank_top_k,
         per_doc_max_chars=args.per_doc_max_chars,
         context_top_n=args.context_top_n,
         retrieval_index_path=args.retrieval_index_path,
+        bm25_index_path=args.bm25_index_path,
         dataset_path=args.dataset_path,
         local_corpus_path=args.local_corpus_path,
         reranker_model=args.reranker_model,
         reranker_batch_size=args.reranker_batch_size,
         reranker_max_length=args.reranker_max_length,
         device=args.device,
+        answer_model=args.answer_model,
+        answer_base_url=args.answer_base_url,
+        answer_temperature=args.answer_temperature,
+        answer_max_tokens=args.answer_max_tokens,
+        reason_top_n=args.reason_top_n,
+        reason_model=args.reason_model,
+        reason_base_url=args.reason_base_url,
     )
     print(format_rag_result(result, show_context_chars=args.show_context_chars))
 

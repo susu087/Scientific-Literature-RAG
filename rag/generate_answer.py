@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import re
+import json
+import os
+import time
+import urllib.error
+import urllib.request
 from typing import Dict, List
 
 from rag.prompts import MOCK_ANSWER_TEMPLATE, build_answer_messages
@@ -79,14 +84,119 @@ def _generate_local_placeholder(question: str, context: str, documents: List[Dic
     return mock_result
 
 
+def _call_openai_compatible_chat(
+    messages: List[Dict[str, str]],
+    model: str,
+    base_url: str,
+    temperature: float,
+    max_tokens: int,
+    timeout: int,
+    max_retries: int,
+) -> str:
+    api_key = os.environ.get("AIHUBMIX_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        raise EnvironmentError("AIHUBMIX_API_KEY or OPENAI_API_KEY is not set.")
+
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        f"{base_url.rstrip('/')}/chat/completions",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                response_data = json.loads(response.read().decode("utf-8"))
+            return response_data["choices"][0]["message"]["content"].strip()
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="ignore")
+            if attempt == max_retries - 1:
+                raise RuntimeError(f"API HTTP error {exc.code}: {error_body}") from exc
+        except Exception:
+            if attempt == max_retries - 1:
+                raise
+        time.sleep(2 * (attempt + 1))
+
+    raise RuntimeError("API request failed after retries.")
+
+
+def _generate_api_answer(
+    question: str,
+    context: str,
+    documents: List[Dict[str, object]],
+    model: str,
+    base_url: str,
+    temperature: float,
+    max_tokens: int,
+    timeout: int,
+    max_retries: int,
+) -> Dict[str, object]:
+    answer = _call_openai_compatible_chat(
+        messages=build_answer_messages(question, context),
+        model=model,
+        base_url=base_url,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout=timeout,
+        max_retries=max_retries,
+    )
+
+    references = [
+        {
+            "doc_id": str(doc.get("doc_id")),
+            "corpusid": doc.get("corpusid"),
+            "title": doc.get("title", ""),
+            "score": doc.get("score"),
+        }
+        for doc in documents
+    ]
+    return {
+        "backend": "api",
+        "answer": answer,
+        "references": references,
+        "messages": build_answer_messages(question, context),
+        "model": model,
+        "base_url": base_url,
+    }
+
+
 def generate_answer(
     question: str,
     context: str,
     documents: List[Dict[str, object]],
     backend: str = "mock",
+    model: str = "gpt-4o-mini",
+    base_url: str = "https://aihubmix.com/v1",
+    temperature: float = 0.0,
+    max_tokens: int = 800,
+    timeout: int = 120,
+    max_retries: int = 3,
 ) -> Dict[str, object]:
     if backend == "mock":
         return _generate_mock_answer(question, documents)
     if backend == "local":
         return _generate_local_placeholder(question, context, documents)
+    if backend in {"api", "openai", "aihubmix"}:
+        return _generate_api_answer(
+            question=question,
+            context=context,
+            documents=documents,
+            model=model,
+            base_url=base_url,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
     raise ValueError(f"Unsupported answer backend: {backend}")
